@@ -1,0 +1,3 @@
+only use this folder if applicable.
+This can include any extra code you used here which is not designed to run in the main Hanabi engine,
+e.g. python neural network code etc., offline data preparation scripts, etc.

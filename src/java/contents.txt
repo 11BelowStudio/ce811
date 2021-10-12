@@ -1,0 +1,2 @@
+Source code for your Hanabi agent here under com.fossgalaxy.games.fireworks.ai.username.
+You should also include your GA engine here in (your username package), if you built one.
