@@ -11,6 +11,10 @@ to get the stuff for this module up and running yet (or what
 exactly the structure of the labs will be), so you'll have to
 wait for that to happen I guess :shrug:
 
+anyway if you're reading this, this is probably one of the branches for
+the lab work (or one of the assignments) that involves the framework for
+The Resistance.
+
 thank u for ur patience
 
 -Rachel Lowe
