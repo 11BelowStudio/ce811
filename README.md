@@ -25,7 +25,8 @@ Specifically, this is the Lab 1 branch.
     * see the /lab 1 documentation/ subfolder for details
     * Need to work out one of the code references though
 * 'Keeping behaviour logs (1)'
-  * Not Done
+  * Done
+    * Also see the /lab 1 documentation/ subfolder for details
 * 'Accusing other Players'
   * Not Done
 

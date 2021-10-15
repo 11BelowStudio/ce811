@@ -1,7 +1,7 @@
 # All of the example bots in this file derive from the base Bot class.  See
 # how this is implemented by looking at player.py.  The API is very well
 # documented there.
-from player import Bot 
+from player import Bot, TPlayer # TPlayer is a type annotation for any subtype of the 'Player' class.
 
 # Each bot has access to the game state, stored in the self.game member
 # variable.  See the State class in game.py for the full list of variables you
@@ -54,16 +54,89 @@ class Paranoid(Bot):
 
 class CountingBot(Bot):
     """An AI bot that counts stuff"""
-    # TODO
 
-    def select(self, players, count):
-        return [self] + random.sample(self.others(), count - 1)
+    def __init__(self, game: State, index: int, spy: bool):
+        super(CountingBot, self).__init__(game, index, spy)
+        self.game: State = game
 
-    def vote(self, team):
+        self.failed_missions_been_on: dict[TPlayer, int] = {}
+        """ A dictionary that keeps count of how many times each player has been on a team that failed."""
 
-        return bool(self == self.game.leader)
+
+    def onGameRevealed(self, players: list[TPlayer], spies: list[TPlayer]) -> None:
+        """
+        At the start of each new game, we clear the list of failed missions that each player has been on,
+        and repopulate it with each player's failed mission count reset to 0
+        :param players: the list of the players playing this game
+        :param spies: the list of spies this game (only visible if this player is a spy)
+        :return: nothing.
+        """
+        self.failed_missions_been_on.clear()
+        for p in players:
+            self.failed_missions_been_on[p] = 0
+
+    def onMissionComplete(self, sabotaged: int) -> None:
+        """
+        At the end of a mission, we see if it was sabotaged (and, if it was, we increment the count of
+        failed missions for the players on the team appropriately).
+
+        Also, if every single player on the team sabotaged it, they're all sus af, so they all
+        get a 'failed missions been on' of a stupidly high number (because none of them are free of sin)
+        :param sabotaged: how many players sabotaged the mission
+        :return: nothing
+        """
+        if sabotaged == 0:
+            pass
+        else:
+            if len(self.game.team) == sabotaged:
+                for k in self.game.team:
+                    self.failed_missions_been_on[k] = 9999999999999999999999999
+            else:
+                for p in self.game.team:
+                    self.failed_missions_been_on[p] += 1
+
+    def select(self, players: list[TPlayer], count: int) -> list[TPlayer]:
+        """
+        Chooses this player,
+        and fills the other slots with the other player(s) who have been on the fewest failed missions
+        :param players: all the players
+        :param count: how many players to select
+        :return: a list with this player and the other players who are least untrustworthy
+        """
+        self.say("Picking myself and others I distrust the least.")
+
+        #sorted_players: list[TPlayer] = sorted(self.others(), key=lambda p: self.failed_missions_been_on[p])[:count-1]
+        #return [self] + sorted_players[:count-1]
+        return [self] + sorted(self.others(), key=lambda p: self.failed_missions_been_on[p])[:count-1]
+
+    def vote(self, team: list[TPlayer]) -> bool:
+        """
+        Opposes all missions if this player is a spy.
+        Otherwise, opposes all missions that contain the two players with the highest count of failed missions.
+        :param team: the team being voted on
+        :return:
+        """
+        if self.spy:
+            return False
+
+        most_sus: set[TPlayer] = set(sorted(self.others(), key=lambda x: self.failed_missions_been_on[x])[-2:])
+        """ The two most suspicious players (most failed missions) """
+
+        if most_sus.isdisjoint(team): # vote yes if those two are not in the mission
+            return True
+        else:
+            return False
 
     def sabotage(self):
+
+        if self.game.turn == 1:
+            self.log.debug("It's turn 1, no sabotaging today!")
+            return False
+        if len(self.game.team) == 2:
+            self.log.debug("There's only two of us, too risky for me to sabotage it")
+            return False
+
+        self.log.debug("I always sabotage when I'm a spy when it isn't turn 1 and there's more than 2 people here")
         return True
 
 

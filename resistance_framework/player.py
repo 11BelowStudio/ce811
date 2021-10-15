@@ -194,7 +194,9 @@ class Bot(Player):
         super(Bot, self).__init__(self.__class__.__name__, index)
 
         self.game = game
+        """ The current gamestate """
         self.spy: bool = spy
+        """ Whether or not this player is a spy"""
 
         self.log = logging.getLogger(self.name)
         if not self.log.handlers:
