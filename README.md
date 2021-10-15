@@ -21,7 +21,9 @@ Specifically, this is the Lab 1 branch.
   * Done
     * see the /lab 1 documentation/ subfolder for details
 * 'Improving resistance play' task
-  * Not Done
+  * Done 
+    * see the /lab 1 documentation/ subfolder for details
+    * Need to work out one of the code references though
 * 'Keeping behaviour logs (1)'
   * Not Done
 * 'Accusing other Players'

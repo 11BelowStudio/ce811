@@ -26,7 +26,16 @@ class Paranoid(Bot):
         self.say("Picking myself and others I don't trust.")
         return [self] + random.sample(self.others(), count - 1)
 
-    def vote(self, team): 
+    def vote(self, team):
+        if (self.spy == False):
+            if (self in team):
+                self.say("I'm a resistance member on the team, so I approve!")
+                return True
+            if (self.game.tries == 5):
+                # TODO: where the fuck is the actual 'base game tries' variable???
+                self.say("I don't like this, but its the last try, so I have to approve it.")
+                return True
+
         self.say("I only vote for my own missions.")
         return bool(self == self.game.leader)
 
