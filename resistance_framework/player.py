@@ -3,6 +3,11 @@ import logging.handlers
 
 import core
 
+from typing import TypeVar
+
+TPlayer = TypeVar("TPlayer", bound="Player")
+"""Anything that's a subtype of the 'Player' class"""
+
 
 class Player(object):
     """A player in the game of resistance, identified by a unique index as the
@@ -20,10 +25,10 @@ class Player(object):
        the details of the Bot class below if you want to write your own AI.
     """
 
-    def __init__(self, name, index):
+    def __init__(self, name: str, index: int):
         # Setup the two member variables first, then continue...
-        self.name = name
-        self.index = index
+        self.name: str = name
+        self.index: int = index
         # This line is necessary for bots using mods as mix-in classes.
         super(Player, self).__init__()
 
@@ -63,134 +68,133 @@ class Bot(Player):
 
     __metaclass__ = core.Observable
 
-
-    def onGameRevealed(self, players, spies):
+    def onGameRevealed(self, players: list[TPlayer], spies: list[TPlayer]) -> None:
         """This function will be called to list all the players, and if you're
         a spy, the spies too -- including others and yourself.
-        @param players  List of all players in the game including you.
-        @param spies    List of players that are spies, or an empty list.
+        :param players:  List of all players in the game including you.
+        :param spies:    List of players that are spies, or an empty list.
         """
         pass
 
-    def onMissionAttempt(self, mission, tries, leader):
+    def onMissionAttempt(self, mission: int, tries: int, leader: TPlayer) -> None:
         """Callback function when a new turn begins, before the
         players are selected.
-        @param mission  Integer representing the mission number (1..5).
-        @param tries    Integer count for its number of tries (1..5).
-        @param leader   A Player representing who's in charge.
+        :param mission:  Integer representing the mission number (1..5).
+        :param tries:    Integer count for its number of tries (1..5).
+        :param leader:   A Player representing who's in charge.
         """
         pass
 
-    def select(self, players, count):
+    def select(self, players: list[TPlayer], count: int) -> list[TPlayer]:
         """Pick a sub-group of players to go on the next mission.
-        @param players  The list of all players in the game to pick from.
-        @param count    The number of players you must now select.
-        @return list    The players selected for the upcoming mission.
+        :param players:  The list of all players in the game to pick from.
+        :param count:    The number of players you must now select.
+        :return: list    The players selected for the upcoming mission.
         """
         raise NotImplemented
 
-    def onTeamSelected(self, leader, team):
+    def onTeamSelected(self, leader: TPlayer, team: list[TPlayer]) -> None:
         """Called immediately after the team is selected to go on a mission,
         and before the voting happens.
-        @param leader   The leader in charge for this mission.
-        @param team     The team that was selected by the current leader.
+        :param leader:   The leader in charge for this mission.
+        :param team:     The team that was selected by the current leader.
         """
         pass
 
-    def vote(self, team):
+    def vote(self, team: list[TPlayer]) -> bool:
         """Given a selected team, decide whether the mission should proceed.
-        @param team      List of players with index and name. 
-        @return bool     Answer Yes/No.
+        :param team:      List of players with index and name.
+        :return: bool     Answer Yes/No.
         """ 
         raise NotImplemented
 
-    def onVoteComplete(self, votes):
+    def onVoteComplete(self, votes: list[bool]) -> None:
         """Callback once the whole team has voted.
-        @param votes        Boolean votes for each player (ordered).
+        :param: votes        Boolean votes for each player (ordered).
         """
         pass
 
-    def sabotage(self):
+    def sabotage(self) -> bool:
         """Decide what to do on the mission once it has been approved.  This
         function is only called if you're a spy, otherwise you have no choice.
-        @return bool        Yes to shoot down a mission.
+        :return: bool        Yes to shoot down a mission.
         """
         raise NotImplemented
 
-    def onMissionComplete(self, sabotaged):
+    def onMissionComplete(self, sabotaged: int) -> None:
         """Callback once the players have been chosen.
-        @param sabotaged    Integer how many times the mission was sabotaged.
+        :param sabotaged:    Integer how many times the mission was sabotaged.
         """
         pass
 
-    def onMissionFailed(self, leader, team):
+    def onMissionFailed(self, leader: TPlayer, team: list[TPlayer]) -> None:
         """Callback once a vote did not reach majority, failing the mission.
-        @param leader       The player responsible for selection.
-        @param team         The list of players chosen for the mission.
+        :param leader:       The player responsible for selection.
+        :param team:         The list of players chosen for the mission.
         """
         pass
 
-    def announce(self):
+    def announce(self) -> dict[TPlayer, float]:
         """Publicly state beliefs about the game's state by announcing spy
         probabilities for any combination of players in the game.  This is
         done after each mission completes, and takes the form of a mapping from
         player to float.  Not all players must be specified, and of course this
         can be innacurate!
 
-        @return dict[Player, float]     Mapping of player to spy probability.
+        :return: dict[Player, float]     Mapping of player to spy probability.
         """
         return {}
 
-    def onAnnouncement(self, source, announcement):
+    def onAnnouncement(self, source: TPlayer, announcement: dict[TPlayer, float]) -> None:
         """Callback if another player decides to announce beliefs about the
         game.  This is passed as a potentially incomplete mapping from player
         to spy probability.
 
-        @param source        Player making the announcement.
-        @param announcement  Dictionnary mapping players to spy probabilities.
+        :param source:        Player making the announcement.
+        :param announcement:  Dictionary mapping players to spy probabilities.
         """
         pass
 
-    def say(self, message):
+    def say(self, message: str) -> None:
         """Helper function to print a message in the global game chat, visible
         by all the other players.
 
-        @param message       String containing free-form text.
+        :param message:       String containing free-form text.
         """
         self.log.info(message)
 
-    def onMessage(self, source, message):
+    def onMessage(self, source: TPlayer, message: str) -> None:
         """Callback if another player sends a general free-form message to the
         channel.  This is passed in as a generic string that needs to be parsed.
 
-        @param source        Player sending the message.
-        @param announcement  Arbitrary string for the message sent.
+        :param source:       Player sending the message.
+        :param message:  Arbitrary string for the message sent.
         """
         pass
 
-    def onGameComplete(self, win, spies):
+    def onGameComplete(self, win: bool, spies: list[TPlayer]) -> None:
         """Callback once the game is complete, and everything is revealed.
-        @param win          Boolean true if the Resistance won.
-        @param spies        List of only the spies in the game.
+        :param win:          Boolean true if the Resistance won.
+        :param spies:        List of only the spies in the game.
         """
         pass
 
-    def others(self):
+    def others(self) -> list[TPlayer]:
         """Helper function to list players in the game that are not your bot."""
         return [p for p in self.game.players if p != self]
 
-    def __init__(self, game, index, spy):
+    def __init__(self, game, index: int, spy: bool):
         """Constructor called before a game starts.  It's recommended you don't
         override this function and instead use onGameRevealed() to perform
         setup for your AI.
-        @param game     the current game state
-        @param index    Your own index in the player list.
-        @param spy      Are you supposed to play as a spy?
+        :param game:     the current game state
+        :param index:    Your own index in the player list.
+        :param spy:      Are you supposed to play as a spy?
         """
         super(Bot, self).__init__(self.__class__.__name__, index)
 
         self.game = game
-        self.spy = spy
+        self.spy: bool = spy
 
         self.log = logging.getLogger(self.name)
         if not self.log.handlers:
@@ -201,8 +205,8 @@ class Bot(Player):
             except IOError:
                 pass
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Built-in function to support pretty-printing."""
-        type = {True: "SPY", False: "RST"}
-        return "<%s #%i %s>" % (self.name, self.index, type[self.spy])
+        t = {True: "SPY", False: "RST"}
+        return "<%s #%i %s>" % (self.name, self.index, t[self.spy])
 

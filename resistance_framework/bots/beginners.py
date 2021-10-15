@@ -52,6 +52,21 @@ class Paranoid(Bot):
         return True
 
 
+class CountingBot(Bot):
+    """An AI bot that counts stuff"""
+    # TODO
+
+    def select(self, players, count):
+        return [self] + random.sample(self.others(), count - 1)
+
+    def vote(self, team):
+
+        return bool(self == self.game.leader)
+
+    def sabotage(self):
+        return True
+
+
 
 class Hippie(Bot):
     """An AI bot that's OK with everything!"""

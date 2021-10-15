@@ -1,5 +1,6 @@
 import itertools
 
+import player
 from player import Player
 
 
@@ -13,31 +14,41 @@ class State(object):
     available about the game."""
 
 
-    PHASE_PREPARING = 0
-    PHASE_SELECTION = 1
-    PHASE_VOTING = 2
-    PHASE_MISSION = 3
-    PHASE_ANNOUNCING = 4
+    PHASE_PREPARING: int = 0
+    PHASE_SELECTION: int = 1
+    PHASE_VOTING: int = 2
+    PHASE_MISSION: int = 3
+    PHASE_ANNOUNCING: int = 4
 
 
     def __init__(self):
-        self.phase = 0                  # int (0..4): Current game phase.
-        self.turn = 1                   # int (1..5): Mission number.
-        self.tries = 1                  # int (1..5): Attempt number.
-        self.wins = 0                   # int (0..3): Number of resistance wins.
-        self.losses = 0                 # int (0..3): Number of spy victories.
-        self.leader = None              # Player: Current mission leader.
-        self.team = None                # set(Player): Set of players picked.
-        self.players = None             # list[Player]: All players in a list.
-        self.votes = None               # list[bool]: Votes for the mission.
-        self.sabotages = None           # int (0..3): Number of sabotages.
+        self.phase: int = 0
+        """int (0..4): Current game phase."""
+        self.turn: int = 1
+        """int (1..5): Mission number."""
+        self.tries: int = 1
+        """int (1..5): Attempt number."""
+        self.wins: int = 0
+        """int (0..3): Number of resistance wins."""
+        self.losses = 0
+        """int (0..3): Number of spy victories."""
+        self.leader: Player = None
+        """Player: Current mission leader."""
+        self.team: set[Player] = None
+        """set(Player): Set of players picked."""
+        self.players: list[Player] = None
+        """list[Player]: All players in a list."""
+        self.votes: list[bool] = None
+        """list[bool]: Votes for the mission."""
+        self.sabotages: int = None
+        """int (0..3): Number of sabotages."""
 
-    def clone(self):
+    def clone(self) -> "State":
         s = State()
         s.__dict__ = self.__dict__.copy()
         return s
 
-    def __eq__(self, other):
+    def __eq__(self, other: "State") -> bool:
         return \
                 self.phase == other.phase           \
             and self.turn == other.turn             \
@@ -50,7 +61,7 @@ class State(object):
             and self.votes == other.votes           \
             and self.sabotages == other.sabotages
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         output = "<State\n"
         for key in sorted(self.__dict__):
             value = self.__dict__[key]
@@ -92,9 +103,8 @@ class BaseGame(object):
     def onGameComplete(self, win, spies):
         pass
 
-
-    def __init__(self, state=None):
-        self.state = state or State()
+    def __init__(self, state: State = None):
+        self.state: State = state or State()
 
         # Configuration for the game itself.
         self.participants = [2, 3, 2, 3, 3]
@@ -125,17 +135,17 @@ class BaseGame(object):
         return self.won or self.lost
 
     @property
-    def won(self):
+    def won(self) -> bool:
         return self.state.wins >= self.NUM_WINS
 
     @property
-    def lost(self):
+    def lost(self) -> bool:
         return self.state.losses >= self.NUM_LOSSES
 
     def callback(self, name, *args):
         getattr(self, name)(*args)
 
-    def next_leader(self):
+    def next_leader(self) -> Player:
         li = ((self.state.leader.index+1) % len(self.state.players)) if self.state.leader else 0
         return self.state.players[li]
 
