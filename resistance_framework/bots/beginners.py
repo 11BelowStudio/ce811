@@ -31,8 +31,17 @@ class Paranoid(Bot):
         return bool(self == self.game.leader)
 
     def sabotage(self):
-        self.log.debug("I always sabotage when I'm a spy.")
-        return True 
+
+        if (self.game.turn == 1):
+            self.log.debug("It's turn 1, no sabotaging today!")
+            return False
+        if (len(self.game.team) == 2):
+            self.log.debug("There's only two of us, too risky for me to sabotage it")
+            return False
+
+        self.log.debug("I always sabotage when I'm a spy when it isn't turn 1 and there's more than 2 people here")
+        return True
+
 
 
 class Hippie(Bot):

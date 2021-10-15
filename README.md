@@ -18,7 +18,8 @@ The Resistance.
 Specifically, this is the Lab 1 branch.
 
 * Modifying the 'Paranoid' bot
-  * Not Done
+  * Done
+    * see the /lab 1 documentation/ subfolder for details
 * 'Improving resistance play' task
   * Not Done
 * 'Keeping behaviour logs (1)'
