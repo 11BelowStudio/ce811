@@ -127,8 +127,10 @@ class CountingBot(Bot):
         else:
             return False
 
-    def sabotage(self):
-
+    def sabotage(self) -> bool:
+        """
+        Doesn't sabotage on turn 1, or when there's only 2 people on the team
+        """
         if self.game.turn == 1:
             self.log.debug("It's turn 1, no sabotaging today!")
             return False
@@ -139,6 +141,18 @@ class CountingBot(Bot):
         self.log.debug("I always sabotage when I'm a spy when it isn't turn 1 and there's more than 2 people here")
         return True
 
+    def announce(self) -> dict[TPlayer, float]:
+        """
+        Announces suspicions via the failed_missions_been_on dict
+        :return: the self.failed_missions_been_on dict
+        # TODO: maybe return that dict in a more appropriate form? documentation didn't specify a standard for this dict
+        """
+        sus_dict: dict[TPlayer, float] = {}
+        for k in [*self.failed_missions_been_on.keys()]:
+            if k == self: # no comment about itself.
+                continue
+            sus_dict[k] = float(self.failed_missions_been_on[k])
+        return sus_dict
 
 
 class Hippie(Bot):

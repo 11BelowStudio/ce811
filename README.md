@@ -28,7 +28,9 @@ Specifically, this is the Lab 1 branch.
   * Done
     * Also see the /lab 1 documentation/ subfolder for details
 * 'Accusing other Players'
-  * Not Done
+  * Done (kinda)
+    * Not sure if there's any standard that I'm supposed to use for
+      the accusation dictionary (like if the floats need to be in a given range or something)
 
 thank u for ur patience
 
