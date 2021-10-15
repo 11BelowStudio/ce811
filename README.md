@@ -15,6 +15,17 @@ anyway if you're reading this, this is probably one of the branches for
 the lab work (or one of the assignments) that involves the framework for
 The Resistance.
 
+Specifically, this is the Lab 1 branch.
+
+* Modifying the 'Paranoid' bot
+  * Not Done
+* 'Improving resistance play' task
+  * Not Done
+* 'Keeping behaviour logs (1)'
+  * Not Done
+* 'Accusing other Players'
+  * Not Done
+
 thank u for ur patience
 
 -Rachel Lowe
