@@ -15,22 +15,18 @@ anyway if you're reading this, this is probably one of the branches for
 the lab work (or one of the assignments) that involves the framework for
 The Resistance.
 
-Specifically, this is the Lab 1 branch.
+Specifically, this is the Lab 2 branch.
+* Intro to keras and gradient descent
+  * Not done
+* Iris dataset
+  * Not done
+* Building a neural network classifier
+  * Not done
+* Building a decision tree classifier
+  * Not done
+* Filling out feedback checker
+  * Not done
 
-* Modifying the 'Paranoid' bot
-  * Done
-    * see the /lab 1 documentation/ subfolder for details
-* 'Improving resistance play' task
-  * Done 
-    * see the /lab 1 documentation/ subfolder for details
-    * Need to work out one of the code references though
-* 'Keeping behaviour logs (1)'
-  * Done
-    * Also see the /lab 1 documentation/ subfolder for details
-* 'Accusing other Players'
-  * Done (kinda)
-    * Not sure if there's any standard that I'm supposed to use for
-      the accusation dictionary (like if the floats need to be in a given range or something)
 
 thank u for ur patience
 
