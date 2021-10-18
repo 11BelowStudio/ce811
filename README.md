@@ -22,11 +22,11 @@ Specifically, this is the Lab 2 branch.
   * Notebook 2
     * Done
 * Iris dataset
-  * Not done
+  * Mostly done
 * Building a neural network classifier
   * Done
 * Building a decision tree classifier
-  * Not done
+  * Done
 * Filling out feedback checker
   * Not done
 

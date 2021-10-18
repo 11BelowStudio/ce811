@@ -25,3 +25,26 @@ from sklearn.metrics import accuracy_score
 # TODO build a decision tree here.
 # TODO evaluate its accuracy on the validation set (should score>90%)
 # TODO plot your decision tree and save it to a file called "decision-tree-iris.png"
+
+clf: tree.DecisionTreeClassifier = tree.DecisionTreeClassifier(max_depth=2, min_samples_leaf=1)
+clf.fit(inputs_train, labels_train)
+output_predictions = clf.predict(inputs_val)
+
+print("Output predictions : ", output_predictions)
+print("Expected outputs   : ", labels_val)
+
+print("Accuracy", accuracy_score(labels_val, output_predictions))
+
+import matplotlib.pyplot as plt
+
+fig = plt.figure()
+tree.plot_tree(clf,
+               feature_names=['sepal length (cm)','sepal width (cm)','petal length (cm)','petal width (cm)'],
+               class_names=["setosa", "versicolor","virginica"],
+               filled=True
+               )
+fig.savefig(
+    "decision_tree.png",
+    bbox_inches="tight"
+)
+
