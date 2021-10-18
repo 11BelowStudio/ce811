@@ -17,7 +17,10 @@ The Resistance.
 
 Specifically, this is the Lab 2 branch.
 * Intro to keras and gradient descent
-  * Not done
+  * Notebook 1
+    * Done
+  * Notebook 2
+    * Not done
 * Iris dataset
   * Not done
 * Building a neural network classifier

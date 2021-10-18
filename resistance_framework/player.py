@@ -45,6 +45,10 @@ class Player(object):
         return hash(self.index) ^ hash(self.name)
 
 
+# noinspection PyPep8
+from game import State
+
+
 class Bot(Player):
     """This is the base class for your AI in THE RESISTANCE.  To get started:
          1) Derive this class from a new file that will contain your AI.  See
@@ -183,7 +187,7 @@ class Bot(Player):
         """Helper function to list players in the game that are not your bot."""
         return [p for p in self.game.players if p != self]
 
-    def __init__(self, game, index: int, spy: bool):
+    def __init__(self, game: State, index: int, spy: bool):
         """Constructor called before a game starts.  It's recommended you don't
         override this function and instead use onGameRevealed() to perform
         setup for your AI.
@@ -193,7 +197,7 @@ class Bot(Player):
         """
         super(Bot, self).__init__(self.__class__.__name__, index)
 
-        self.game = game
+        self.game: State = game
         """ The current gamestate """
         self.spy: bool = spy
         """ Whether or not this player is a spy"""
