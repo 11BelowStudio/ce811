@@ -1,7 +1,7 @@
 import itertools
 
 import player
-from player import Player
+from player import Player, TPlayer
 
 
 class State(object):
@@ -32,19 +32,19 @@ class State(object):
         """int (0..3): Number of resistance wins."""
         self.losses = 0
         """int (0..3): Number of spy victories."""
-        self.leader: Player = None
-        """Player: Current mission leader."""
-        self.team: set[Player] = None
-        """set(Player): Set of players picked."""
-        self.players: list[Player] = None
-        """list[Player]: All players in a list."""
+        self.leader: TPlayer = None
+        """TPlayer: Current mission leader."""
+        self.team: set[TPlayer] = None
+        """set(TPlayer): Set of players picked."""
+        self.players: list[TPlayer] = None
+        """list[TPlayer]: All players in a list."""
         self.votes: list[bool] = None
         """list[bool]: Votes for the mission."""
         self.sabotages: int = None
         """int (0..3): Number of sabotages."""
 
     def clone(self) -> "State":
-        s = State()
+        s: "State" = State()
         s.__dict__ = self.__dict__.copy()
         return s
 
@@ -62,7 +62,7 @@ class State(object):
             and self.sabotages == other.sabotages
 
     def __repr__(self) -> str:
-        output = "<State\n"
+        output: str = "<State\n"
         for key in sorted(self.__dict__):
             value = self.__dict__[key]
             output += "\t- %s: %r\n" % (key, value)
@@ -73,34 +73,34 @@ class BaseGame(object):
     """Implementation of the core gameplay of THE RESISTANCE.  This class
     currently only supports games of 5 players."""
 
-    MAX_TURNS = 5
-    MAX_TRIES = 5
-    NUM_WINS = 3
-    NUM_LOSSES = 3
+    MAX_TURNS: int = 5
+    MAX_TRIES: int = 5
+    NUM_WINS: int = 3
+    NUM_LOSSES: int = 3
 
 
-    def onGameRevealed(self, players, spies):
+    def onGameRevealed(self, players: list[TPlayer], spies: list[TPlayer]):
         pass
 
-    def onMissionAttempt(self, mission, tries, leader):
+    def onMissionAttempt(self, mission: int, tries: int, leader: TPlayer):
         pass
 
-    def onTeamSelected(self, leader, team):
+    def onTeamSelected(self, leader: TPlayer, team: list[TPlayer]):
         pass
 
-    def onVoteComplete(self, votes):
+    def onVoteComplete(self, votes: list[bool]):
         pass
 
-    def onMissionComplete(self, sabotaged):
+    def onMissionComplete(self, sabotaged: int):
         pass
 
-    def onMissionFailed(self, leader, team):
+    def onMissionFailed(self, leader: TPlayer, team: list[TPlayer]):
         pass
 
-    def onAnnouncement(self, source, announcement):
+    def onAnnouncement(self, source: TPlayer, announcement: dict[TPlayer, float]):
         pass
 
-    def onGameComplete(self, win, spies):
+    def onGameComplete(self, win: bool, spies: list[TPlayer]):
         pass
 
     def __init__(self, state: State = None):
@@ -318,7 +318,7 @@ class Game(BaseGame):
         for p in [b for b in self.bots if b not in self.state.team]:
             p.onMissionComplete(sabotaged)
         
-    def get_sabotages(self):
+    def get_sabotages(self) -> int:
         sabotaged = 0
         for s in self.state.team:
             p = self.bots[s.index]

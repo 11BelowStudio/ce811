@@ -57,11 +57,9 @@ class CountingBot(Bot):
 
     def __init__(self, game: State, index: int, spy: bool):
         super(CountingBot, self).__init__(game, index, spy)
-        self.game: State = game
 
         self.failed_missions_been_on: dict[TPlayer, int] = {}
         """ A dictionary that keeps count of how many times each player has been on a team that failed."""
-
 
     def onGameRevealed(self, players: list[TPlayer], spies: list[TPlayer]) -> None:
         """
@@ -149,7 +147,7 @@ class CountingBot(Bot):
         """
         sus_dict: dict[TPlayer, float] = {}
         for k in [*self.failed_missions_been_on.keys()]:
-            if k == self: # no comment about itself.
+            if k == self:  # no comment about itself.
                 continue
             sus_dict[k] = float(self.failed_missions_been_on[k])
         return sus_dict

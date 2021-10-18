@@ -20,7 +20,7 @@ Specifically, this is the Lab 2 branch.
   * Notebook 1
     * Done
   * Notebook 2
-    * Not done
+    * Done
 * Iris dataset
   * Not done
 * Building a neural network classifier
