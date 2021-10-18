@@ -24,7 +24,7 @@ Specifically, this is the Lab 2 branch.
 * Iris dataset
   * Not done
 * Building a neural network classifier
-  * Not done
+  * Done
 * Building a decision tree classifier
   * Not done
 * Filling out feedback checker
