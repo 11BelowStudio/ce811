@@ -18,6 +18,8 @@ from game import State
 # altogether!
 import random
 
+from typing import List, Dict, Set # 3.8 compatibility
+
 
 class Paranoid(Bot):
     """An AI bot that tends to vote everything down!"""
@@ -27,12 +29,12 @@ class Paranoid(Bot):
         return [self] + random.sample(self.others(), count - 1)
 
     def vote(self, team):
-        if (self.spy == False):
-            if (self in team):
+        if  self.spy == False:
+            if self in team:
                 self.say("I'm a resistance member on the team, so I approve!")
                 return True
-            if (self.game.tries == 5):
-                # TODO: where the fuck is the actual 'base game tries' variable???
+            if self.game.tries == 5:
+                # TODO: how can I access the actual 'base game tries' variable???
                 self.say("I don't like this, but its the last try, so I have to approve it.")
                 return True
 
@@ -41,10 +43,10 @@ class Paranoid(Bot):
 
     def sabotage(self):
 
-        if (self.game.turn == 1):
+        if self.game.turn == 1:
             self.log.debug("It's turn 1, no sabotaging today!")
             return False
-        if (len(self.game.team) == 2):
+        if len(self.game.team) == 2:
             self.log.debug("There's only two of us, too risky for me to sabotage it")
             return False
 
@@ -58,10 +60,10 @@ class CountingBot(Bot):
     def __init__(self, game: State, index: int, spy: bool):
         super(CountingBot, self).__init__(game, index, spy)
 
-        self.failed_missions_been_on: dict[TPlayer, int] = {}
+        self.failed_missions_been_on: Dict[TPlayer, int] = {}
         """ A dictionary that keeps count of how many times each player has been on a team that failed."""
 
-    def onGameRevealed(self, players: list[TPlayer], spies: list[TPlayer]) -> None:
+    def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
         """
         At the start of each new game, we clear the list of failed missions that each player has been on,
         and repopulate it with each player's failed mission count reset to 0
@@ -93,7 +95,7 @@ class CountingBot(Bot):
                 for p in self.game.team:
                     self.failed_missions_been_on[p] += 1
 
-    def select(self, players: list[TPlayer], count: int) -> list[TPlayer]:
+    def select(self, players: List[TPlayer], count: int) -> List[TPlayer]:
         """
         Chooses this player,
         and fills the other slots with the other player(s) who have been on the fewest failed missions
@@ -107,7 +109,7 @@ class CountingBot(Bot):
         #return [self] + sorted_players[:count-1]
         return [self] + sorted(self.others(), key=lambda p: self.failed_missions_been_on[p])[:count-1]
 
-    def vote(self, team: list[TPlayer]) -> bool:
+    def vote(self, team: List[TPlayer]) -> bool:
         """
         Opposes all missions if this player is a spy.
         Otherwise, opposes all missions that contain the two players with the highest count of failed missions.
@@ -117,7 +119,7 @@ class CountingBot(Bot):
         if self.spy:
             return False
 
-        most_sus: set[TPlayer] = set(sorted(self.others(), key=lambda x: self.failed_missions_been_on[x])[-2:])
+        most_sus: Set[TPlayer] = set(sorted(self.others(), key=lambda x: self.failed_missions_been_on[x])[-2:])
         """ The two most suspicious players (most failed missions) """
 
         if most_sus.isdisjoint(team): # vote yes if those two are not in the mission
@@ -139,13 +141,13 @@ class CountingBot(Bot):
         self.log.debug("I always sabotage when I'm a spy when it isn't turn 1 and there's more than 2 people here")
         return True
 
-    def announce(self) -> dict[TPlayer, float]:
+    def announce(self) -> Dict[TPlayer, float]:
         """
         Announces suspicions via the failed_missions_been_on dict
         :return: the self.failed_missions_been_on dict
         # TODO: maybe return that dict in a more appropriate form? documentation didn't specify a standard for this dict
         """
-        sus_dict: dict[TPlayer, float] = {}
+        sus_dict: Dict[TPlayer, float] = {}
         for k in [*self.failed_missions_been_on.keys()]:
             if k == self:  # no comment about itself.
                 continue

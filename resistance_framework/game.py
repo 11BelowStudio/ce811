@@ -2,6 +2,7 @@ import itertools
 
 import player
 from player import Player, TPlayer
+from typing import List, Set, Dict # 3.8 compatibility
 
 
 class State(object):
@@ -13,13 +14,11 @@ class State(object):
     updated automatically (in between API calls) once new information is
     available about the game."""
 
-
     PHASE_PREPARING: int = 0
     PHASE_SELECTION: int = 1
     PHASE_VOTING: int = 2
     PHASE_MISSION: int = 3
     PHASE_ANNOUNCING: int = 4
-
 
     def __init__(self):
         self.phase: int = 0
@@ -34,11 +33,11 @@ class State(object):
         """int (0..3): Number of spy victories."""
         self.leader: TPlayer = None
         """TPlayer: Current mission leader."""
-        self.team: set[TPlayer] = None
+        self.team: Set[TPlayer] = None
         """set(TPlayer): Set of players picked."""
-        self.players: list[TPlayer] = None
+        self.players: List[TPlayer] = None
         """list[TPlayer]: All players in a list."""
-        self.votes: list[bool] = None
+        self.votes: List[bool] = None
         """list[bool]: Votes for the mission."""
         self.sabotages: int = None
         """int (0..3): Number of sabotages."""
@@ -78,36 +77,35 @@ class BaseGame(object):
     NUM_WINS: int = 3
     NUM_LOSSES: int = 3
 
-
-    def onGameRevealed(self, players: list[TPlayer], spies: list[TPlayer]):
+    def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]):
         pass
 
     def onMissionAttempt(self, mission: int, tries: int, leader: TPlayer):
         pass
 
-    def onTeamSelected(self, leader: TPlayer, team: list[TPlayer]):
+    def onTeamSelected(self, leader: TPlayer, team: List[TPlayer]):
         pass
 
-    def onVoteComplete(self, votes: list[bool]):
+    def onVoteComplete(self, votes: List[bool]):
         pass
 
     def onMissionComplete(self, sabotaged: int):
         pass
 
-    def onMissionFailed(self, leader: TPlayer, team: list[TPlayer]):
+    def onMissionFailed(self, leader: TPlayer, team: List[TPlayer]):
         pass
 
-    def onAnnouncement(self, source: TPlayer, announcement: dict[TPlayer, float]):
+    def onAnnouncement(self, source: TPlayer, announcement: Dict[TPlayer, float]):
         pass
 
-    def onGameComplete(self, win: bool, spies: list[TPlayer]):
+    def onGameComplete(self, win: bool, spies: List[TPlayer]):
         pass
 
     def __init__(self, state: State = None):
         self.state: State = state or State()
 
         # Configuration for the game itself.
-        self.participants = [2, 3, 2, 3, 3]
+        self.participants: List[int] = [2, 3, 2, 3, 3]
 
     def run(self):
         """Main entry point for the resistance game.  Once initialized call this to 
@@ -118,13 +116,13 @@ class BaseGame(object):
             self.step()
         
         # Pass back the results to the bots so they can do some learning!
-        spies = set([Player(p.name, p.index) for p in self.bots if p.spy])
+        spies: Set[TPlayer] = set([Player(p.name, p.index) for p in self.bots if p.spy])
         for p in self.bots:
             p.onGameComplete(self.state.wins >= self.NUM_WINS, spies)
         self.onGameComplete(self.state.wins >= self.NUM_WINS, spies)
 
     @property
-    def done(self):
+    def done(self) -> bool:
         # If there wasn't an agreement then the spies win.
         if self.state.tries > self.MAX_TRIES:
             return True
@@ -145,11 +143,11 @@ class BaseGame(object):
     def callback(self, name, *args):
         getattr(self, name)(*args)
 
-    def next_leader(self) -> Player:
+    def next_leader(self) -> TPlayer:
         li = ((self.state.leader.index+1) % len(self.state.players)) if self.state.leader else 0
         return self.state.players[li]
 
-    def get_selection(self, count):
+    def get_selection(self, count: int):
         raise NotImplementedError
 
     def do_selection(self):
