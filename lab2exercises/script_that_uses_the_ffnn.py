@@ -6,7 +6,7 @@ import numpy as np
 
 from typing import Tuple
 
-iris_model: keras.Model = keras.models.load_model("iris.h5")
+iris_model: keras.Model = keras.models.load_model("ModelIris.h5")
 
 labels: Tuple[str, str, str] = ("Iris Setosa", "Iris Versicolor", "Iris Virginica")
 

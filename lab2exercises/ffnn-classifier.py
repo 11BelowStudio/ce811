@@ -42,11 +42,8 @@ model.add(layer1)
 layer2: layers.Dense = layers.Dense(10, activation="tanh", input_shape=(10,))
 model.add(layer2)
 
-layer3: layers.Dense = layers.Dense(3, activation="tanh", input_shape=(10,))
+layer3: layers.Dense = layers.Dense(3, activation=tf.keras.activations.softmax, input_shape=(10,))
 model.add(layer3)
-
-layer4: layers.Softmax = layers.Softmax()
-model.add(layer4)
 
 
 eta = 0.01

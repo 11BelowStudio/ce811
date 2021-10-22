@@ -4,7 +4,7 @@ from tensorflow.keras import layers
 import pandas as pd
 import numpy as np
 
-iris_model: keras.Model = keras.models.load_model("iris.h5")#("ModelIris.h5")
+iris_model: keras.Model = keras.models.load_model("ModelIris.h5")#("ModelIris.h5")
 """
 The iris model we made earlier.
 """

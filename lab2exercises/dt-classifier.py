@@ -43,6 +43,8 @@ tree.plot_tree(clf,
                class_names=["setosa", "versicolor","virginica"],
                filled=True
                )
+
+fig.show()
 fig.savefig(
     "decision_tree_iris.png",
     bbox_inches="tight"
