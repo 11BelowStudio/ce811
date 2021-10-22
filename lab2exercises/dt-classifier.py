@@ -22,9 +22,9 @@ print(inputs_train[0])
 
 from sklearn import tree
 from sklearn.metrics import accuracy_score
-# TODO build a decision tree here.
-# TODO evaluate its accuracy on the validation set (should score>90%)
-# TODO plot your decision tree and save it to a file called "decision-tree-iris.png"
+# build a decision tree here.
+# evaluated its accuracy on the validation set (should score>90%)
+# plotted the decision tree and save it to a file called "decision-tree-iris.png"
 
 clf: tree.DecisionTreeClassifier = tree.DecisionTreeClassifier(max_depth=2, min_samples_leaf=1)
 clf.fit(inputs_train, labels_train)
@@ -44,7 +44,12 @@ tree.plot_tree(clf,
                filled=True
                )
 fig.savefig(
-    "decision_tree.png",
+    "decision_tree_iris.png",
     bbox_inches="tight"
 )
 
+import pickle
+
+pickle_out = open("iris_decision_tree.p","wb") # wb means write file, in binary format
+pickle.dump(clf, pickle_out)
+pickle_out.close()

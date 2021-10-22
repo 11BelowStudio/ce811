@@ -4,12 +4,11 @@ from tensorflow.keras import layers
 import pandas as pd
 import numpy as np
 
-iris_model: keras.Model = keras.models.load_model("iris.h5") # ("iris_model")
+iris_model: keras.Model = keras.models.load_model("iris.h5")#("ModelIris.h5")
 """
 The iris model we made earlier.
 """
 
-#iris_model.save("iris.h5")
 
 inputs_val = pd.read_csv('datasets/iris_test.csv',usecols = [0,1,2,3],skiprows = None,header=None).values
 labels_val = pd.read_csv('datasets/iris_test.csv',usecols = [4],skiprows = None ,header=None).values.reshape(-1)

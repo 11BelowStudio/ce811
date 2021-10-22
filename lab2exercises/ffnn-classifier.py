@@ -27,14 +27,14 @@ print("Data loaded (shapes only)", inputs_train.shape, labels_train.shape, input
 import tensorflow as tf
 
 
-num_inputs = 4 #TODO how many inputs does your neural network have?
+num_inputs: int = 4 # has 4 inputs
     # inputs are in form of a 4-index 1D array.
 num_outputs: int = 3 # It needs 3 outputs because there are 3 types of flowers being categorised.
 
-#TODO  define a suitable keras model here
+#  defined a suitable keras model here
 
 # Define Sequential model with 3 layers, architecture "numinputs-10-10-3", with tanh on all non final layers
-model: keras.Model = keras.Sequential(name="flower_nn")
+model: keras.Model = keras.Sequential(name="my_neural_network")
 
 layer1: layers.Dense = layers.Dense(10, activation="tanh", input_shape=(4,))
 model.add(layer1)
@@ -55,7 +55,7 @@ sgd_opt = keras.optimizers.SGD(eta)
 
 using_adam: bool = True
 
-epochs = 120
+epochs = 200
 
 modelInfoString = "{} epochs, {} optimizer, {} eta".format(
     epochs, "adam" if using_adam else "sgd", eta
@@ -92,7 +92,7 @@ plt.grid()
 plt.show()
 
 
-#model.save("iris_model")
+model.save("ModelIris.h5", save_format="h5")
 
 model_outputs = model(inputs_val)
 
