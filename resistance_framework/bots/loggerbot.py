@@ -25,26 +25,26 @@ class LoggerBot(Bot):
         has been on a mission"""
 
         self.num_missions_voted_up_with_total_suspect_count: Dict[
-            TPlayer, List[int, int, int, int, int, int, int]
+            TPlayer, List[int, int, int, int, int, int]
         ] = {}
         """
-        Dictionary that holds, for each player, a list of 7 ints,
+        Dictionary that holds, for each player, a list of 6 ints,
         where the ith element shows how many teams with a suspect
         count of i that the player voted in favour of
         """
 
         self.num_missions_voted_down_with_total_suspect_count: Dict[
-            TPlayer, List[int, int, int, int, int, int, int]
+            TPlayer, List[int, int, int, int, int, int]
         ] = {}
         """
-        Dictionary that holds, for each player, a list of 7 ints,
+        Dictionary that holds, for each player, a list of 6 ints,
         where the ith element shows how many teams with a suspect
         count of i that the player voted against
         """
 
         self.training_feature_vectors: Dict[TPlayer, List[
             List[
-                int, int, int, str, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int
+                int, int, int, str, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int
             ]
         ]] = {}
         """
@@ -56,8 +56,8 @@ class LoggerBot(Bot):
         * name (string)
         * missions been on
         * failed missions been on
-        * missions with each suspect count voted in favour of (7)
-        * missions with each suspect count voted against (7)
+        * missions with each suspect count voted in favour of (6)
+        * missions with each suspect count voted against (6)
         * whether or not it's a spy
         """
 
@@ -88,6 +88,8 @@ class LoggerBot(Bot):
         """
 
         team_sus_count: int = self.mission_total_suspect_count(self.game.team)
+        if team_sus_count > 5: # capping it at 5
+            team_sus_count = 5
 
         for v in range(0, len(votes)):
             current_player: TPlayer = self.game.players[v]
@@ -103,7 +105,7 @@ class LoggerBot(Bot):
                 self.num_missions_voted_down_with_total_suspect_count[p]
             )
 
-        pass # TODO complete this function
+        pass
 
     def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
         """This function will be called to list all the players, and if you're
@@ -118,8 +120,8 @@ class LoggerBot(Bot):
         for p in players:
             self.failed_missions_been_on[p] = 0
             self.missions_been_on[p] = 0
-            self.num_missions_voted_up_with_total_suspect_count[p] = [0, 0, 0, 0, 0, 0, 0]
-            self.num_missions_voted_down_with_total_suspect_count[p] = [0, 0, 0, 0, 0, 0, 0]
+            self.num_missions_voted_up_with_total_suspect_count[p] = [0, 0, 0, 0, 0, 0]
+            self.num_missions_voted_down_with_total_suspect_count[p] = [0, 0, 0, 0, 0, 0]
 
         self.training_feature_vectors.clear()
         for p in players:
