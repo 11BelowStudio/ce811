@@ -1,7 +1,7 @@
 from player import Bot, TPlayer
 from game import State
 import random
-from typing import List, Dict, Set
+from typing import List, Dict, Iterable
 
 # run this with python competition.py 10000 bots/intermediates.py bots/loggerbot.py  
 # Then check logs/loggerbot.log   Delete that file before running though
@@ -49,7 +49,7 @@ class LoggerBot(Bot):
     def sabotage(self) -> bool:
         return True
 
-    def mission_total_suspect_count(self, team: List[TPlayer]) -> int:
+    def mission_total_suspect_count(self, team: Iterable[TPlayer]) -> int:
         """
         Returns the total number of failed missions that the players in the
         current team have been on
@@ -65,6 +65,16 @@ class LoggerBot(Bot):
         """Callback once the whole team has voted.
         @param votes        Boolean votes for each player (ordered).
         """
+
+        team_sus_count: int = self.mission_total_suspect_count(self.game.team)
+
+        for v in range(0, len(votes)):
+            current_player: TPlayer = self.game.players[v]
+            if votes[v]:
+                self.num_missions_voted_up_with_total_suspect_count[current_player][team_sus_count] += 1
+            else:
+                self.num_missions_voted_down_with_total_suspect_count[current_player][team_sus_count] += 1
+
         pass # TODO complete this function
 
     def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
@@ -87,9 +97,19 @@ class LoggerBot(Bot):
 
     def onMissionComplete(self, sabotaged: int) -> None:
         """Callback once the players have been chosen.
-        @param sabotaged    Integer how many times the mission was sabotaged.
+        :param sabotaged:    Integer how many times the mission was sabotaged.
         """
-        pass # TODO complete this function
+
+        for p1 in self.game.team:
+            self.missions_been_on[p1] += 1
+
+        if sabotaged == 0:
+            pass
+        else:
+            for p2 in self.game.team:
+                self.failed_missions_been_on[p2] += 1
+
+        pass
 
     def onGameComplete(self, win: bool, spies: List[TPlayer]) -> None:
         """Callback once the game is complete, and everything is revealed.
