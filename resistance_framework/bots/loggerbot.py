@@ -1,3 +1,5 @@
+import sys
+
 from player import Bot, TPlayer
 from game import State
 import random
@@ -40,6 +42,25 @@ class LoggerBot(Bot):
         count of i that the player voted against
         """
 
+        self.training_feature_vectors: Dict[TPlayer, List[
+            List[
+                int, int, int, str, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int
+            ]
+        ]] = {}
+        """
+        A dictionary that will hold feature vectors for each player,
+        for use with a neural network.
+        * turn
+        * tries
+        * index
+        * name (string)
+        * missions been on
+        * failed missions been on
+        * missions with each suspect count voted in favour of (6)
+        * missions with each suspect count voted against (6)
+        * whether or not it's a spy
+        """
+
     def select(self, players: List[TPlayer], count: int) -> List[TPlayer]:
         return [self] + random.sample(self.others(), count - 1)
 
@@ -75,6 +96,13 @@ class LoggerBot(Bot):
             else:
                 self.num_missions_voted_down_with_total_suspect_count[current_player][team_sus_count] += 1
 
+        for p in self.game.players:
+            self.training_feature_vectors[p].append(
+                [self.game.turn, self.game.tries, p.index, p.name, self.missions_been_on[p], self.failed_missions_been_on[p]]
+                + self.num_missions_voted_up_with_total_suspect_count[p] +
+                self.num_missions_voted_down_with_total_suspect_count[p]
+            )
+
         pass # TODO complete this function
 
     def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
@@ -92,6 +120,11 @@ class LoggerBot(Bot):
             self.missions_been_on[p] = 0
             self.num_missions_voted_up_with_total_suspect_count[p] = [0, 0, 0, 0, 0, 0]
             self.num_missions_voted_down_with_total_suspect_count[p] = [0, 0, 0, 0, 0, 0]
+
+        self.training_feature_vectors.clear()
+        for p in players:
+            self.training_feature_vectors[p] = []
+
 
         pass # TODO complete this function
 
@@ -113,7 +146,16 @@ class LoggerBot(Bot):
 
     def onGameComplete(self, win: bool, spies: List[TPlayer]) -> None:
         """Callback once the game is complete, and everything is revealed.
-        @param win          Boolean true if the Resistance won.
-        @param spies        List of only the spies in the game.
+        :param win:          Boolean true if the Resistance won.
+        :param spies:        List of only the spies in the game.
         """
-        pass # TODO complete this function (in challenge 2)
+        for player_number in range(len(self.game.players)):
+            player: TPlayer = self.game.players[player_number]
+            spy: bool = player in spies  # This will be a boolean
+            feature_vectors = self.training_feature_vectors[player]  # These are our input features
+            for v in feature_vectors:
+                v.append(
+                    1 if spy else 0
+                )  # append a 1 or 0 onto the end of our feature vector (for the label, i.e. spy or not spy)
+                self.log.debug(','.join(map(str,
+                                            v)))  # converts all of elements of v into a csv list, and writes the full csv list to the log file
