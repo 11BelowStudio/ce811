@@ -2,10 +2,9 @@ import unittest
 import random
 from inspect import isclass
 
-from game import Game
 from player import Bot
 from bots import beginners, intermediates, validators
-
+from game import Game
 
 def run_game(cls):
     players = [cls] * 3 + [beginners.RandomBot, validators.StateChecker]
@@ -32,3 +31,7 @@ def test_intermediates():
 
 if __name__ == "__main__":
     unittest.main()
+    test_beginners()
+    test_intermediates()
+
+
