@@ -60,6 +60,8 @@ class LoggerBot(Bot):
         * missions with each suspect count voted against (6)
         * whether or not it's a spy
         """
+        self.spies: List[TPlayer] = []
+        """Will hold all known spies (empty if not a spy)"""
 
     def select(self, players: List[TPlayer], count: int) -> List[TPlayer]:
         return [self] + random.sample(self.others(), count - 1)
@@ -126,6 +128,10 @@ class LoggerBot(Bot):
         self.training_feature_vectors.clear()
         for p in players:
             self.training_feature_vectors[p] = []
+
+        # taking note of known spies
+        self.spies.clear()
+        self.spies = spies.copy()
 
         pass
 

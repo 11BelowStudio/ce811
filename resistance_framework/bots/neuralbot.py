@@ -4,7 +4,7 @@ from player import Bot, TPlayer
 from game import State
 import random
 
-from typing import List, Dict, Iterable, Tuple, Any
+from typing import List, Dict, Iterable, Tuple, Any, Set
 
 # to run this
 # python3 competition.py 1000 bots/beginners.py bots/neuralbot.py
@@ -77,7 +77,33 @@ class NeuralBot(LoggerBot):
             return True
 
     def sabotage(self) -> bool:
-        # the logic here is a bit boring and maybe could be improved.
+        # don't bother on turn 1
+        if self.game.turn == 1:
+            return False
+        # if the resistance have won twice
+        if self.game.wins == 2:
+            # see if it's my job to sabotage
+            return self.isItMyJobToSabotage()
+        # in all other cases
+        else:
+            # sorts players by how sus they are, in ascending order
+            spy_chances: Dict[TPlayer, float] = self.announce()
+            sorted_by_sus_level: List[TPlayer] = \
+                sorted(self.game.players, key=lambda p1: spy_chances[p1])
+
+            # sorts players by their failed missions, in ascending order.
+            # sorted_by_failed_missions: List[TPlayer] = \
+            #    sorted(self.game.players, key=lambda p1: self.failed_missions_been_on[p1])
+            most_legit_three: Set[TPlayer] = set(sorted_by_sus_level[:3])
+            # set(sorted_by_failed_missions[:3])
+
+            # look at all the other people in the  team
+            others_in_team: Set[TPlayer] = self.game.team.copy()
+            others_in_team.remove(self)
+            # if the team members are all legit overall (all in the top 3 of legitness)
+            if len(set(others_in_team) & set(most_legit_three)) == len(others_in_team):
+                # see if this bot is responsible for sabotaging this.
+                return self.isItMyJobToSabotage()
         return True
 
         #sorted_by_failed_missions: List[TPlayer] = \
@@ -88,6 +114,31 @@ class NeuralBot(LoggerBot):
         #    return True
         #
         #return False
+
+    def isItMyJobToSabotage(self) -> bool:
+        """
+        Works out whether or not this bot is responsible for sabotaging
+        this round.
+        :return: true if this bot should sabotage, false if it's someone else's problem.
+        """
+        # if the leader's a spy, it's their job to sabotage.
+        if self.game.leader == self:
+            # if this bot is the leader, it'll sabotage
+            return True
+        if self.game.leader in self.spies:
+            # if the leader is another spy, it's their job to sabotage
+            return False
+        # if the leader isn't a spy
+        else:
+            # it's the job of the first spy in the team to sabotage
+            for p in self.game.team:
+                if p == self:
+                    # if this bot is the first spy in the team, it sabotages
+                    return True
+                elif p in self.spies:
+                    # otherwise, it's that spy's job
+                    break
+            return False
 
     def announce(self) -> Dict[TPlayer, float]:
         """Publicly state beliefs about the game's state by announcing spy
