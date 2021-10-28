@@ -15,7 +15,7 @@ anyway if you're reading this, this is probably one of the branches for
 the lab work (or one of the assignments) that involves the framework for
 The Resistance.
 
-Specifically, this is the Lab 3 branch.
+Specifically, this is the branch I'm using for the The Resistance assignment
 
 thank u for ur patience
 
