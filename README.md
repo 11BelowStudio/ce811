@@ -15,21 +15,7 @@ anyway if you're reading this, this is probably one of the branches for
 the lab work (or one of the assignments) that involves the framework for
 The Resistance.
 
-Specifically, this is the Lab 2 branch.
-* Intro to keras and gradient descent
-  * Notebook 1
-    * Done
-  * Notebook 2
-    * Done
-* Iris dataset
-  * Mostly done
-* Building a neural network classifier
-  * Done
-* Building a decision tree classifier
-  * Done
-* Filling out feedback checker
-  * Not done
-
+Specifically, this is the Lab 3 branch.
 
 thank u for ur patience
 
