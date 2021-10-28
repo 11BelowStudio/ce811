@@ -77,6 +77,9 @@ class NeuralBot(LoggerBot):
             return True
 
     def sabotage(self) -> bool:
+
+        # note to self: might try to work on a better neural network thing for the assignment
+
         # don't bother on turn 1
         if self.game.turn == 1:
             return False

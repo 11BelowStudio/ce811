@@ -1,0 +1,54 @@
+2021-10-28 16:45:27.349755: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-10-28 16:45:27.350389: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-10-28 16:45:29.468757: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'nvcuda.dll'; dlerror: nvcuda.dll not found
+2021-10-28 16:45:29.469353: W tensorflow/stream_executor/cuda/cuda_driver.cc:326] failed call to cuInit: UNKNOWN ERROR (303)
+2021-10-28 16:45:29.476967: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: cseelab721
+2021-10-28 16:45:29.477602: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: cseelab721
+2021-10-28 16:45:29.478186: I tensorflow/core/platform/cpu_feature_guard.cc:142] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX AVX2
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+Running competition with 6 bots.
+[<class 'intermediates.Bounder'>, <class 'loggerbot.LoggerBot'>, <class 'neuralbot.NeuralBot'>, <class 'intermediates.Bounder'>, <class 'loggerbot.LoggerBot'>, <class 'neuralbot.NeuralBot'>]
+2021-10-28 16:45:30.177417: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-10-28 16:45:30.178094: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-10-28 16:45:32.240435: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'nvcuda.dll'; dlerror: nvcuda.dll not found
+2021-10-28 16:45:32.241025: W tensorflow/stream_executor/cuda/cuda_driver.cc:326] failed call to cuInit: UNKNOWN ERROR (303)
+2021-10-28 16:45:32.249053: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: cseelab721
+2021-10-28 16:45:32.249831: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: cseelab721
+2021-10-28 16:45:32.250475: I tensorflow/core/platform/cpu_feature_guard.cc:142] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX AVX2
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(05%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(10%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(15%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(20%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(25%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(30%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(35%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(40%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(45%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(50%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(55%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(60%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(65%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(70%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(75%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(80%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(85%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(90%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(95%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(100%)
+
+SPIES				(vote,		 voted,		 selected,	 selection)
+  NeuralBot        80.0% 	 100.%  0.0% 	 72.8% 		 48.0% 		 100.%
+  Bounder          75.3% 	 78.4% 44.4% 	 59.3% 		 42.2% 		 100.%
+  LoggerBot        60.5% 	 100.%  0.0% 	 48.5% 		 37.5% 		 100.%
+RESISTANCE			(vote,		 voted,		 selected,	 selection)
+  NeuralBot        35.4% 	 79.9% 66.2% 	 73.8% 		 58.0% 		 60.4%
+  Bounder          32.3% 	 95.5% 45.3% 	 76.7% 		 56.2% 		 56.6%
+  LoggerBot        16.6% 	 100.%  0.0% 	 74.2% 		 53.4% 		 32.8%
+TOTAL
+  NeuralBot        53.2% (e=0.76 n=16667)
+  Bounder          49.6% (e=0.76 n=16660)
+  LoggerBot        34.1% (e=0.72 n=16673)
+
+
+Process finished with exit code 0
