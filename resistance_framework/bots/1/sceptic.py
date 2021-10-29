@@ -10,6 +10,7 @@ from game import State
 import random
 import math
 import itertools
+from functools import reduce
 
 
 class GameCombinations:
@@ -27,7 +28,7 @@ class GameCombinations:
 		#				indices[k] = indices[k-1]+1
 		#			break
 		# next line do the same. Should work for any number of players and spies
-		self.combinations = map(lambda x: [True if y in x else False for y in range(playerCnt)], itertools.combinations(range(playerCnt),spyCnt))
+		self.combinations = [[True if y in x else False for y in range(playerCnt)] for x in itertools.combinations(list(range(playerCnt)),spyCnt)]
 	
 	def addSabotage(self, team, sabotage):
 		# remove those combinations which are not possible for given combination of team and number of sabotages
@@ -52,7 +53,7 @@ class GameCombinations:
 			for j in range(len(c)):
 				if c[j]:
 					res[j] += 1
-		return map(lambda x: float(x)/cnt, res)
+		return [float(x)/cnt for x in res]
 		
 class SampledValue:
 	# class which calculates mean value from given samples

@@ -6,7 +6,7 @@
 @about: THE RESISTANCE Competition, Vienna Game/AI Conference 2012.
 """
 
-from __future__ import print_function, division, unicode_literals
+
 
 # Variable names are for losers.
 
@@ -71,7 +71,7 @@ def majority_vote(a):
     return sum(a[len(a)//2+1:])
 
 def weighted(f, a):
-    b = map(f, a)
+    b = list(map(f, a))
     c = sum(b)
     for d, e in zip(b, a):
         yield d/c, e
@@ -493,7 +493,7 @@ class KreuterBot(Bot):
             # Five players 17 instances of Prediction
             # Ten players 514 instances of Prediction
 
-            d = map(P, players) # shared predictors for resistance
+            d = list(map(P, players)) # shared predictors for resistance
             f = [None] * len(players) # f[x] = is x a spy in the predictor set being built
 
             self.all_pred = d[:]
@@ -526,8 +526,8 @@ class KreuterBot(Bot):
 
     def onVoteComplete(self, votes):
         rprint(self.game.leader, "chose", self.game.team, "which was", sum(votes)>len(self.game.players)/2 and "ACCEPTED" or "REJECTED")
-        p2v = dict(zip(self.game.players, votes))
-        for p, v in p2v.items():
+        p2v = dict(list(zip(self.game.players, votes)))
+        for p, v in list(p2v.items()):
             rprint(p, "voted", v and "YES" or "NO")
         self.gamelog.append((copy(self.game), Log.Vote, p2v))
         for pred in self.all_pred:
@@ -553,7 +553,7 @@ class KreuterBot(Bot):
                 return True
 
             if suspects:
-                self.hyps = filter(tnt, self.hyps)
+                self.hyps = list(filter(tnt, self.hyps))
                 print("detected new spies", suspects, "hyps left:", len(self.hyps))
 
             if len(self.spies) == 2: #self.game.num_spies:
@@ -571,7 +571,7 @@ class KreuterBot(Bot):
             pred.upload(self.gamelog, spies)
 
         pprint(self.stats)
-        for name, globalpred in Prediction.track.items():
+        for name, globalpred in list(Prediction.track.items()):
             rprint(name)
             pprint(vars(globalpred))
 
@@ -580,7 +580,7 @@ class KreuterBot(Bot):
         return
     
         from pprint import pprint
-        for name, globalpred in Prediction.track.items():
+        for name, globalpred in list(Prediction.track.items()):
             fprint(name)
             pprint(vars(globalpred))
 
@@ -590,7 +590,7 @@ class KreuterBot(Bot):
         return
 
         print = rprint
-        cc = map(consistency, self.hyps)
+        cc = list(map(consistency, self.hyps))
         z = sum(cc)
         ranking = sorted(zip(cc, self.hyps))
         top = ranking #[-3:]

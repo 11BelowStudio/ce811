@@ -6,7 +6,7 @@
 @since: 02.08.2012
 """
 
-from __future__ import division
+
 from game import State
 from genericpath import exists
 from player import Bot
@@ -171,7 +171,7 @@ class HartBot(Bot):
         @param count The number of players you must select
         @return list The players selected
         """
-        sortedSuspection = sorted(self.suspection.items(), key=lambda t : t[1])
+        sortedSuspection = sorted(list(self.suspection.items()), key=lambda t : t[1])
         sortedIndexes = [k for k, v in sortedSuspection]
         return [p for p in self.players if p.index in sortedIndexes[0:count]]
     

@@ -34,7 +34,7 @@ class SoreLooser(Player):
 
         if (self.spy):
             for p in spies:
-                if p.index<>self.me.index:
+                if p.index!=self.me.index:
                     self.accomplice = p                    
         pass
 
@@ -101,7 +101,7 @@ class SoreLooser(Player):
         if (not self.spy):
             i = 0
             for p in players:
-               if (p<>self.me):
+               if (p!=self.me):
                   if (votes[i]==self.lastVote):
                       self.good[p] += 50
                   else:
@@ -117,7 +117,7 @@ class SoreLooser(Player):
         if (not self.spy):
             for p in team:
                 if sabotaged:
-                    if (self.me<>p):
+                    if (self.me!=p):
                         self.good.update({p:self.good[p]-100})
                 else:
                     self.good.update({p:self.good[p]+100})

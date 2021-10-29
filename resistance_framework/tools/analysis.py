@@ -9,7 +9,7 @@ from sceptic import ScepticBot
 
 
 def main(arg):
-    print '.',
+    print('.', end=' ')
     res, spy = arg
     RandomCheater.cheat_SetRate(float(res) / 10.0, float(spy) / 10.0)
 
@@ -33,17 +33,17 @@ if __name__ == '__main__':
 
     n_processes = 1  # multiprocessing.cpu_count()
 
-    print "Measuring performance of Resistance AI (SkepticBot) against bots of exact skill."
-    print " - 10 total skill levels for spy and resistance."
-    print " - 121 jobs run in total, for 250 games each."
-    print " - Using %i threads to run the evaluations...\n" % n_processes
+    print("Measuring performance of Resistance AI (SkepticBot) against bots of exact skill.")
+    print(" - 10 total skill levels for spy and resistance.")
+    print(" - 121 jobs run in total, for 250 games each.")
+    print((" - Using %i threads to run the evaluations...\n" % n_processes))
 
     pool = multiprocessing.Pool(processes=n_processes)
     results = {}
-    for i, t in pool.map(main, itertools.product(range(11), range(11))):
+    for i, t in pool.map(main, itertools.product(list(range(11)), list(range(11)))):
         results[i] = float(t)
 
-    X, Y = np.meshgrid(range(11), range(11))
+    X, Y = np.meshgrid(list(range(11)), list(range(11)))
     zs = np.array([results[(x,y)] for x,y in zip(np.ravel(X), np.ravel(Y))])
     Z = zs.reshape(X.shape)
 
@@ -55,6 +55,6 @@ if __name__ == '__main__':
     ax.set_yticklabels(['s=%1.1f' % (float(i*2)/10.0) for i in range(6)])
     ax.set_zlabel('Improvement')
 
-    print "\n\nShowing performance graph of the evaluated bot relative to its opponents."
+    print("\n\nShowing performance graph of the evaluated bot relative to its opponents.")
     plt.show()
 

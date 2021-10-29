@@ -28,13 +28,13 @@ if __name__ == '__main__':
             break
         else:
             last, other = runner.last()
-            print "ROUND #%i: Eliminated %s." % (rnd, last[0].__name__),
+            print("ROUND #%i: Eliminated %s." % (rnd, last[0].__name__), end=' ')
             if last[1].estimate() + last[1].error() < other[1].estimate()     \
             and other[1].estimate() + other[1].error() > last[1].estimate():
-                print "(approved)"
+                print("(approved)")
             else:
-                print "(suspect %s)" % (other[0].__name__)
-            print " %s vs %s" % (last[1].detail(), other[1].detail())
+                print("(suspect %s)" % (other[0].__name__))
+            print(" %s vs %s" % (last[1].detail(), other[1].detail()))
             pool.remove(last[0])
         rnd += 1
 

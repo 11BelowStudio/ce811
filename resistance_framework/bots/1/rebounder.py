@@ -50,10 +50,10 @@ class Rebounder(Bot):
             # weak_configs is an upper bound (and always true) - it assumes spies may or may not defect
             # vote_configs assumes a spy will vote against any team that does not contain a spy
             # select_configs assumes a spy will always choose a team consisting of himself plus non-spies
-            self.strong_configs = range(6)
-            self.weak_configs = range(6)
-            self.vote_configs = range(6)
-            self.select_configs = range(6)
+            self.strong_configs = list(range(6))
+            self.weak_configs = list(range(6))
+            self.vote_configs = list(range(6))
+            self.select_configs = list(range(6))
 
     def configs_to_string(self, configs):
         """ Return the possible spy pairs for the given list of configs (from the point of view of self) 

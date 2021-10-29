@@ -127,7 +127,7 @@ class Invalidator(Bot):
         return [r for r in ranked if self.invalidations[r] == invalidations]
 
     def select(self, players, count):
-        likely = self.likeliest(self.invalidations.keys())
+        likely = self.likeliest(list(self.invalidations.keys()))
         self.log.debug("Selecting randomly from these Resistance teams:")
         for c in likely:
             self.log.debug("  %s = %0.2f (%i)" % (self.getResistance(c), self.invalidations[c], len(self.factors[c])))
@@ -173,7 +173,7 @@ class Invalidator(Bot):
                 self.log.debug("Possible configuration for %s:" % (str(self.getResistance(config))))
                 for s, f in self.factors[config]:
                     self.log.debug("  %0.2f - %s" % (s, f))
-            self.log.debug("Options for Resistance were:\n%s" % ("\n".join(["  %s = %0.2f (%i)" % (str(self.getResistance(c)), t, len(self.factors[c])) for c, t in self.invalidations.items() if t == threshold])))
+            self.log.debug("Options for Resistance were:\n%s" % ("\n".join(["  %s = %0.2f (%i)" % (str(self.getResistance(c)), t, len(self.factors[c])) for c, t in list(self.invalidations.items()) if t == threshold])))
             return False
 
     def onVoteComplete(self, votes):

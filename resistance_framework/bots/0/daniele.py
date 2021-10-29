@@ -49,7 +49,7 @@ class IAmNotASpyPlayer(Player):
             return me + random.sample(others, count-1)
         # As resistance, pick myself also and others randomly.
         else:                    
-            couples = zip(self.stats, [p.index for p in players])
+            couples = list(zip(self.stats, [p.index for p in players]))
             #print "c:  ", couples
             #print "sc: ", sorted(couples)
             others=[]

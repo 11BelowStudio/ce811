@@ -39,8 +39,8 @@ class Opeth(Bot):
         """
         self.spy_spies = spies
 
-        self.my_guess = dict(zip(players, [0] * 5))
-        self.their_guess = dict(zip(players, [0] * 5))
+        self.my_guess = dict(list(zip(players, [0] * 5)))
+        self.their_guess = dict(list(zip(players, [0] * 5)))
 
     def onMissionAttempt(self, mission, tries, leader):
         """Callback function when a new turn begins, before the

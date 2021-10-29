@@ -6,7 +6,7 @@
 """
 
 try:
-    import cPickle as pickle #@UnusedImport
+    import pickle as pickle #@UnusedImport
 except:
     import pickle #@Reimport
     
@@ -28,7 +28,7 @@ def pickleDumpDict(name, d):
         pickle.dump(d, f)
         f.close()
         return True
-    except Exception, e:
+    except Exception as e:
         # print 'Error writing into', name, ':', str(e)
         return False
 
@@ -39,7 +39,7 @@ def pickleReadDict(name):
         f = open(name + '.pickle')
         val = pickle.load(f)
         f.close()
-    except Exception, e:
+    except Exception as e:
         # print 'Nothing read from', name, ':', str(e)
         val = {}
     return val
@@ -86,8 +86,8 @@ class StatBase():
             d1 = self._data
         if len(d2) == 0:
             d2 = self._data
-        l1 = sum([len(x) for x in d1.values()])
-        l2 = sum([len(x) for x in d2.values()])        
+        l1 = sum([len(x) for x in list(d1.values())])
+        l2 = sum([len(x) for x in list(d2.values())])        
         if l1 < l2:
             self._data = d2
         else:
@@ -105,13 +105,13 @@ class StatBase():
         ticker[0] += 1            
         
     def pprint(self):
-        print "Player statistics on %s / %s topics." % (len(self._data), sum([len(x) for x in self._data.values()]))
+        print("Player statistics on %s / %s topics." % (len(self._data), sum([len(x) for x in list(self._data.values())])))
         for n, d in sorted(self._data.items()):
             if len(d) > 0:
-                print n
+                print(n)
                 for k, v in sorted(d.items()):
                     if v.total > 0 and v.samples > 0 and None not in k:
-                        print k, v, v.samples
+                        print(k, v, v.samples)
     
     @staticmethod                    
     def _canonical(team, subject, spies):
@@ -265,23 +265,23 @@ class Statistics(object):
         the currently accumulated evidence. """
         totprob = 1.
         if verbose:
-            print '\nHypothesis', spies
+            print('\nHypothesis', spies)
         
         # TODO: normalize by alternatives! This is all incorrect?
         for t, s, g, _ in self.missions:
             spynames = sorted([self._name(p) for p in spies.intersection(t)])             
             if len(t)==2 and s==2 and len(spies.intersection(t)) == 2:
                 if verbose:
-                    print '  obvious bad:', t, s
+                    print('  obvious bad:', t, s)
                 return 1e50
             elif len(spynames) < s:
                 if verbose:
-                    print '  obvious not bad:', t, s, spynames
+                    print('  obvious not bad:', t, s, spynames)
                 return 1e-50
             elif len(spynames) > 0:
                 prob = allPlayerStats.getProbM(s, len(t), spynames, g)
                 if verbose:
-                    print '   mission', t, s, g, '\t',spynames, '\t', round(prob,4)                    
+                    print('   mission', t, s, g, '\t',spynames, '\t', round(prob,4))                    
                 totprob *= prob            
                 
         for t, l, g, r in self.selections:
@@ -291,7 +291,7 @@ class Statistics(object):
             ct = StatBase._canonical(t, l, spies)
             prob = allPlayerStats.getProbS(ct, l in spies, self._name(l), g, r)
             if verbose:
-                print '    select',  t, '\t', l,self._name(l),  g, ct, '\t', round(prob,4)                
+                print('    select',  t, '\t', l,self._name(l),  g, ct, '\t', round(prob,4))                
             totprob *= sqrt(prob)
         
         for t, l, vt, vote, g, r in self.votes:
@@ -300,15 +300,15 @@ class Statistics(object):
             ct = StatBase._canonical(t, vt, spies)
             prob = allPlayerStats.getProbV(vt in spies, ct, self._name(vt), l==vt, g, r)
             if verbose:
-                print '     vote', t, l, '\t', vt, self._name(vt), vote, g, '\t', ct, '\t', round(prob,4)                
+                print('     vote', t, l, '\t', vt, self._name(vt), vote, g, '\t', ct, '\t', round(prob,4))                
             if vote:
                 totprob *= sqrt(sqrt(prob))
             else:
                 totprob *= sqrt(sqrt(1-prob))
         
         if verbose:
-            print "  Result:", totprob
-            print
+            print("  Result:", totprob)
+            print()
         return totprob
                             
 
@@ -597,9 +597,9 @@ class InferenceBot(StatBot):
         # DEBUG
         for s in self.spies:
             if not s in spies:
-                print self, self.spy, self.spies, spies
-                print self.sprobs
-                print self.hprobs
+                print(self, self.spy, self.spies, spies)
+                print(self.sprobs)
+                print(self.hprobs)
                 self.verbose = True
                 self.inferSpies()
                 #raise
@@ -616,7 +616,7 @@ class InferenceBot(StatBot):
     def inferSpies(self):
         if self.spy:# or len(self.spies)==2:
             if self.verbose:
-                print 'Done', self
+                print('Done', self)
         else:
             for h in self._hypotheses:
                 self.hprobs[h] = self.stats.hypothesis(set([s.index for s in h]), self.index, self.verbose)
@@ -624,7 +624,7 @@ class InferenceBot(StatBot):
             for k in self.hprobs:
                 self.hprobs[k] /= tot
                 if self.verbose:
-                    print "The pair %s are the spies with prob %s" %(k, round(self.hprobs[k],3))
+                    print("The pair %s are the spies with prob %s" %(k, round(self.hprobs[k],3)))
             for p in self.players:
                 if p.index == self.index:
                     continue
@@ -638,12 +638,12 @@ class InferenceBot(StatBot):
                     self.safe.add(p)
             if self.verbose:
                 for p in self.sprobs:
-                    print "The player %s is a spy with prob %s" %(p, round(self.sprobs[p],3))
+                    print("The player %s is a spy with prob %s" %(p, round(self.sprobs[p],3)))
         
         #DEBUG
         if len(self.spies) > 2 and not self.verbose:
             self.verbose = True
-            print self.players, self.spies
+            print(self.players, self.spies)
             self.inferSpies()
             self.verbose = False
                 
@@ -686,7 +686,7 @@ class InferenceBot(StatBot):
         if self.spy:
             cases = [(self.spies, 1)]
         else:
-            cases = self.hprobs.items()
+            cases = list(self.hprobs.items())
         for h, prob in cases:
             for i, p in enumerate(self.others()):
                 ct = StatBase._canonical(self.game.team, p, h)

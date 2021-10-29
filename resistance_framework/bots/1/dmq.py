@@ -122,7 +122,7 @@ class RuleStatistics:
         self.total = 0
 
     def ruleFired(self, ruleFired):
-        if self.entries.has_key(ruleFired):
+        if ruleFired in self.entries:
             self.entries[ruleFired] += 1
         else:
             self.entries[ruleFired] = 1
@@ -130,7 +130,7 @@ class RuleStatistics:
 
     def __repr__(self):
         result = "TOTAL RULES FIRED %i\n" % (self.total)
-        for key, value in sorted(self.entries.iteritems(), key=lambda (k,v): (v,k)):
+        for key, value in sorted(iter(self.entries.items()), key=lambda k_v6: (k_v6[1],k_v6[0])):
             result += "RULE: %s  TIMES:  %s\n" % (key, value)
         return result
 
@@ -222,7 +222,7 @@ class OneSpySelectionBehavior(ResistanceBaseBehavior):
     def process(self, game, owner, phase):
         spies = list(owner.memory.spies)
         sorted_by_trust = []
-        for key, value in sorted(owner.entries.entries.iteritems(), key=lambda (k,v): (v,k)):
+        for key, value in sorted(iter(owner.entries.entries.items()), key=lambda k_v7: (k_v7[1],k_v7[0])):
             if not(key in spies):
                 sorted_by_trust.append((key, value))
         sorted_by_trust.reverse()
@@ -242,7 +242,7 @@ class OneSpyLessSuspiciousSelectionBehavior(ResistanceBaseBehavior):
         if game.turns > 1 and game.wins == 0:
             spies = list(owner.memory.spies)
             sorted_by_trust = []
-            for key, value in sorted(owner.entries.entries.iteritems(), key=lambda (k,v): (v,k)):
+            for key, value in sorted(iter(owner.entries.entries.items()), key=lambda k_v: (k_v[1],k_v[0])):
                 if not(key in spies):
                     sorted_by_trust.append((key, value))
             sorted_by_trust.reverse()
@@ -313,7 +313,7 @@ class LessSuspiciousSelectionBehaviour(ResistanceBaseBehavior):
     """We haven't got enough info, me, resistance and others that might be not spies"""
     def process(self, game, owner, phase):
         sorted_by_trust = []
-        for key, value in sorted(owner.entries.entries.iteritems(), key=lambda (k,v): (v,k)):
+        for key, value in sorted(iter(owner.entries.entries.items()), key=lambda k_v8: (k_v8[1],k_v8[0])):
             if key != owner:
                 sorted_by_trust.append((key, value))
         sorted_by_trust.reverse()
@@ -333,7 +333,7 @@ class NotSelectedSelectionBehaviour(ResistanceBaseBehavior):
         #use this method if we haven't won any round
         if game.turn == 3 and game.wins == 0:
             sorted_by_trust = []
-            for key, value in sorted(owner.entries.entries.iteritems(), key=lambda (k,v): (v,k)):
+            for key, value in sorted(iter(owner.entries.entries.items()), key=lambda k_v1: (k_v1[1],k_v1[0])):
                 if key != owner:
                     sorted_by_trust.append((key, value))
             sorted_by_trust.reverse()
@@ -396,7 +396,7 @@ class MostUntrustedSelectionBehaviour(ResistanceBaseBehavior):
         #use this method if we haven't won any round
         if game.turn == 2 and game.wins == 0:
             sorted_by_trust = []
-            for key, value in sorted(owner.entries.entries.iteritems(), key=lambda (k,v): (v,k)):
+            for key, value in sorted(iter(owner.entries.entries.items()), key=lambda k_v2: (k_v2[1],k_v2[0])):
                 if key != owner:
                     sorted_by_trust.append((key, value))
             sorted_by_trust.reverse()
@@ -512,7 +512,7 @@ class ResistanceMemberBasicVoting(ResistanceBaseBehavior):
 
         sorted_by_trust = []
 
-        for key, value in sorted(owner.entries.entries.iteritems(), key=lambda (k,v): (v,k)):
+        for key, value in sorted(iter(owner.entries.entries.items()), key=lambda k_v9: (k_v9[1],k_v9[0])):
             if key != owner:
                 sorted_by_trust.append((key, value))
 
@@ -546,7 +546,7 @@ class NotSelectedOnVotingBehaviour(ResistanceBaseBehavior):
         #use this method if we haven't won any round
         if game.turn == 3 and game.wins == 0:
             sorted_by_trust = []
-            for key, value in sorted(owner.entries.entries.iteritems(), key=lambda (k,v): (v,k)):
+            for key, value in sorted(iter(owner.entries.entries.items()), key=lambda k_v3: (k_v3[1],k_v3[0])):
                 if key != owner:
                     sorted_by_trust.append((key, value))
             #sorted_by_trust.reverse()
@@ -592,7 +592,7 @@ class NotSelected3OnVotingBehaviour(ResistanceBaseBehavior):
         #use this method if we haven't won any round
         if game.turn == 3 and game.wins == 0:
             sorted_by_trust = []
-            for key, value in sorted(owner.entries.entries.iteritems(), key=lambda (k,v): (v,k)):
+            for key, value in sorted(iter(owner.entries.entries.items()), key=lambda k_v4: (k_v4[1],k_v4[0])):
                 if key != owner:
                     sorted_by_trust.append((key, value))
             sorted_by_trust.reverse()
@@ -619,7 +619,7 @@ class NotSelected2OnVotingBehaviour(ResistanceBaseBehavior):
         #use this method if we haven't won any round
         if game.turn == 2 and game.wins == 0:
             sorted_by_trust = []
-            for key, value in sorted(owner.entries.entries.iteritems(), key=lambda (k,v): (v,k)):
+            for key, value in sorted(iter(owner.entries.entries.items()), key=lambda k_v5: (k_v5[1],k_v5[0])):
                 if key != owner:
                     sorted_by_trust.append((key, value))
             sorted_by_trust.reverse()
@@ -663,7 +663,7 @@ class ResistanceMemberBCTeamMembers(ResistanceBaseBehavior):
     """
     def process(self, game, owner, phase):
         sorted_by_trust = []
-        for key, value in sorted(owner.entries.entries.iteritems(), key=lambda (k,v): (v,k)):
+        for key, value in sorted(iter(owner.entries.entries.items()), key=lambda k_v10: (k_v10[1],k_v10[0])):
             if key != owner:
                 sorted_by_trust.append((key, value))
         sorted_by_trust.reverse()
@@ -1073,7 +1073,7 @@ class matrix:
             dimy = dimx
         # check if valid dimensions
         if dimx < 1 or dimy < 1:
-            raise ValueError, "Invalid size of matrix"
+            raise ValueError("Invalid size of matrix")
         else:
             self.dimx  = dimx
             self.dimy  = dimy
@@ -1087,7 +1087,7 @@ class matrix:
     def identity(self, dim):
         # check if valid dimension
         if dim < 1:
-            raise ValueError, "Invalid size of matrix"
+            raise ValueError("Invalid size of matrix")
         else:
             self.dimx  = dim
             self.dimy  = dim
@@ -1101,8 +1101,8 @@ class matrix:
 
     def show(self, txt = ''):
         for i in range(len(self.value)):
-            print txt + '['+ ', '.join('%.3f'%x for x in self.value[i]) + ']'
-        print ' '
+            print(txt + '['+ ', '.join('%.3f'%x for x in self.value[i]) + ']')
+        print(' ')
 
     # ------------
     #
@@ -1112,7 +1112,7 @@ class matrix:
     def __add__(self, other):
         # check if correct dimensions
         if self.dimx != other.dimx or self.dimx != other.dimx:
-            raise ValueError, "Matrices must be of equal dimension to add"
+            raise ValueError("Matrices must be of equal dimension to add")
         else:
             # add if correct dimensions
             res = matrix()
@@ -1130,7 +1130,7 @@ class matrix:
     def __sub__(self, other):
         # check if correct dimensions
         if self.dimx != other.dimx or self.dimx != other.dimx:
-            raise ValueError, "Matrices must be of equal dimension to subtract"
+            raise ValueError("Matrices must be of equal dimension to subtract")
         else:
             # subtract if correct dimensions
             res = matrix()
@@ -1148,7 +1148,7 @@ class matrix:
     def __mul__(self, other):
         # check if correct dimensions
         if self.dimy != other.dimx:
-            raise ValueError, "Matrices must be m*n and n*p to multiply"
+            raise ValueError("Matrices must be m*n and n*p to multiply")
         else:
             # multiply if correct dimensions
             res = matrix()
@@ -1201,7 +1201,7 @@ class matrix:
         if list2 == []:
             list2 = list1
         if len(list1) > self.dimx or len(list2) > self.dimy:
-            raise ValueError, "list invalid in take()"
+            raise ValueError("list invalid in take()")
 
         res = matrix()
         res.zero(len(list1), len(list2))
@@ -1237,7 +1237,7 @@ class matrix:
         if list2 == []:
             list2 = list1
         if len(list1) > self.dimx or len(list2) > self.dimy:
-            raise ValueError, "list invalid in expand()"
+            raise ValueError("list invalid in expand()")
 
         res = matrix()
         res.zero(dimx, dimy)
@@ -1265,7 +1265,7 @@ class matrix:
                 res.value[i][i] = 0.0
             else:
                 if d < 0.0:
-                    raise ValueError, "Matrix not positive-definite"
+                    raise ValueError("Matrix not positive-definite")
                 res.value[i][i] = sqrt(d)
             for j in range(i+1, self.dimx):
                 S = sum([res.value[k][i] * res.value[k][j] for k in range(i)])
@@ -1287,11 +1287,11 @@ class matrix:
         res.zero(self.dimx, self.dimx)
 
         # Backward step for inverse.
-        for j in reversed(range(self.dimx)):
+        for j in reversed(list(range(self.dimx))):
             tjj = self.value[j][j]
             S = sum([self.value[j][k]*res.value[j][k] for k in range(j+1, self.dimx)])
             res.value[j][j] = 1.0/ tjj**2 - S/ tjj
-            for i in reversed(range(j)):
+            for i in reversed(list(range(j))):
                 res.value[j][i] = res.value[i][j] = \
                     -sum([self.value[i][k]*res.value[k][j] for k in \
                               range(i+1,self.dimx)])/self.value[i][i]

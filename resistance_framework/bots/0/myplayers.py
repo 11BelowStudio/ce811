@@ -16,8 +16,8 @@ class Bounder(Bot):
             # each of these configs corresponds to a possible arrangement of spies among the other players
             # strong configs is a lower bound - it assumes spies always defect
             # weak configs is an upper bound - it assumes spies may or may not defect
-            self.strong_configs = range(6)
-            self.weak_configs = range(6)
+            self.strong_configs = list(range(6))
+            self.weak_configs = list(range(6))
 
     def configs_to_string(self, configs):
         """ Return the possible spy pairs for the given list of configs (from the point of view of self) 
