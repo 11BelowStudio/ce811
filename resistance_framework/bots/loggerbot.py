@@ -3,7 +3,7 @@ import sys
 from player import Bot, TPlayer
 from game import State
 import random
-from typing import List, Dict, Iterable
+from typing import List, Dict, Iterable, Set
 
 # run this with python competition.py 10000 bots/intermediates.py bots/loggerbot.py  
 # Then check logs/loggerbot.log   Delete that file before running though
@@ -44,7 +44,7 @@ class LoggerBot(Bot):
 
         self.training_feature_vectors: Dict[TPlayer, List[
             List[
-                int, int, int, str, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int
+                int, int, int, str, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int
             ]
         ]] = {}
         """
@@ -56,21 +56,111 @@ class LoggerBot(Bot):
         * name (string)
         * missions been on
         * failed missions been on
+        * failed missions proposed
         * missions with each suspect count voted in favour of (6)
         * missions with each suspect count voted against (6)
         * whether or not it's a spy
         """
         self.spies: List[TPlayer] = []
         """Will hold all known spies (empty if not a spy)"""
+        self.failed_missions_proposed: Dict[TPlayer, int] = {}
+        """a dictionary keeping track of every failed mission proposed by the given player"""
 
     def select(self, players: List[TPlayer], count: int) -> List[TPlayer]:
-        return [self] + random.sample(self.others(), count - 1)
+        sus_dict: Dict[TPlayer, float] = self.get_sus_dict()
+        sorted_players_by_trustworthiness: List[TPlayer] = \
+            sorted(players, key=lambda p1: sus_dict[p1])
+        sorted_players_by_trustworthiness.remove(self)
+
+        return [self] + sorted_players_by_trustworthiness[:count - 1]
+        #return [self] + random.sample(self.others(), count - 1)
 
     def vote(self, team: List[TPlayer]) -> bool:
+        """
+        sus_levels: Dict[TPlayer, float] = self.get_sus_dict()
+        sorted_players_by_trustworthiness: List[TPlayer] = \
+            sorted([*sus_levels.keys()], key=lambda p2: sus_levels[p2])
+        if not self.spy:
+            if self.game.tries == 5:
+                return True
+            if self in team: # if this bot is in the team, just look at the other players in the team
+                theOthers: List[TPlayer] = team.copy()
+                theOthers.remove(self)
+                sorted_players_by_trustworthiness.remove(self)
+                for p in theOthers:
+                    if p in sorted_players_by_trustworthiness[-2:]:
+                        return False
+            else:
+                return False
+                #for x in team:
+                #    if x in sorted_players_by_trustworthiness[-2:]:
+                #        return False
+            return True
+        else:
+            return True
+        """
         return True
 
     def sabotage(self) -> bool:
+        """
+        # note to self: might try to work on a better neural network thing for the assignment
+
+        # don't bother on turn 1
+        if self.game.turn == 1:
+            return False
+        # if the resistance have won twice
+        if self.game.wins == 2:
+            # see if it's my job to sabotage
+            return self.isItMyJobToSabotage()
+        # in all other cases
+        else:
+            # sorts players by how sus they are, in ascending order
+            sus_levels: Dict[TPlayer, float] = self.get_sus_dict()
+            sorted_by_sus_level: List[TPlayer] = \
+                sorted(self.game.players, key=lambda p1: sus_levels[p1])
+
+            # sorts players by their failed missions, in ascending order.
+            # sorted_by_failed_missions: List[TPlayer] = \
+            #    sorted(self.game.players, key=lambda p1: self.failed_missions_been_on[p1])
+            most_legit_three: Set[TPlayer] = set(sorted_by_sus_level[:3])
+            # set(sorted_by_failed_missions[:3])
+
+            # look at all the other people in the  team
+            others_in_team: Set[TPlayer] = self.game.team.copy()
+            others_in_team.remove(self)
+            # if the team members are all legit overall (all in the top 3 of legitness)
+            if len(set(others_in_team) & set(most_legit_three)) == len(others_in_team):
+                # see if this bot is responsible for sabotaging this.
+                return self.isItMyJobToSabotage()
         return True
+        """
+        return True
+
+    def isItMyJobToSabotage(self) -> bool:
+        """
+        Works out whether or not this bot is responsible for sabotaging
+        this round.
+        :return: true if this bot should sabotage, false if it's someone else's problem.
+        """
+        # if the leader's a spy, it's their job to sabotage.
+        if self.game.leader == self:
+            # if this bot is the leader, it'll sabotage
+            return True
+        if self.game.leader in self.spies:
+            # if the leader is another spy, it's their job to sabotage
+            return False
+        # if the leader isn't a spy
+        else:
+            # it's the job of the first spy in the team to sabotage
+            for p in self.game.team:
+                if p == self:
+                    # if this bot is the first spy in the team, it sabotages
+                    return True
+                elif p in self.spies:
+                    # otherwise, it's that spy's job
+                    break
+            return False
+
 
     def mission_total_suspect_count(self, team: Iterable[TPlayer]) -> int:
         """
@@ -102,12 +192,34 @@ class LoggerBot(Bot):
 
         for p in self.game.players:
             self.training_feature_vectors[p].append(
-                [self.game.turn, self.game.tries, p.index, p.name, self.missions_been_on[p], self.failed_missions_been_on[p]]
+                [self.game.turn, self.game.tries, p.index, p.name,
+                 self.missions_been_on[p], self.failed_missions_been_on[p], self.failed_missions_proposed[p]]
                 + self.num_missions_voted_up_with_total_suspect_count[p] +
                 self.num_missions_voted_down_with_total_suspect_count[p]
             )
 
         pass
+
+    def get_sus_dict(self) -> Dict[TPlayer, float]:
+        """
+        Returns a dictionary with the relative susness of each player
+        susness, in this instance, is defined as:
+            (failed missions this player has been on + failed missions proposed by player)/
+            ((total failed_missions_been_on + total failed proposed missions)/5)
+        basically, on average, a player would have a sus level of 1. lower than 1 = legit. higher than 1: very sus
+        :return: a dictionary of total_sus_count stuff, calculated with the above formula.
+        """
+        sus_dict: Dict[TPlayer, float] = {}
+        total_sus_count: int = self.mission_total_suspect_count(self.game.players)
+        if total_sus_count == 0:
+            for p1 in self.game.players:
+                sus_dict[p1] = 0
+            return sus_dict
+        for leader in self.game.players:
+            total_sus_count += self.failed_missions_proposed[leader]
+        for p in self.game.players:
+            sus_dict[p] = (self.failed_missions_been_on[p] + self.failed_missions_proposed[p])/(total_sus_count/5)
+        return sus_dict
 
     def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
         """This function will be called to list all the players, and if you're
@@ -119,9 +231,11 @@ class LoggerBot(Bot):
         self.missions_been_on.clear()
         self.num_missions_voted_up_with_total_suspect_count.clear()
         self.num_missions_voted_down_with_total_suspect_count.clear()
+        self.failed_missions_proposed.clear()
         for p in players:
             self.failed_missions_been_on[p] = 0
             self.missions_been_on[p] = 0
+            self.failed_missions_proposed[p] = 0
             self.num_missions_voted_up_with_total_suspect_count[p] = [0, 0, 0, 0, 0, 0]
             self.num_missions_voted_down_with_total_suspect_count[p] = [0, 0, 0, 0, 0, 0]
 
@@ -146,6 +260,7 @@ class LoggerBot(Bot):
         if sabotaged == 0:
             pass
         else:
+            self.failed_missions_proposed[self.game.leader] += 1
             for p2 in self.game.team:
                 self.failed_missions_been_on[p2] += 1
 

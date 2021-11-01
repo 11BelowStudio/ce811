@@ -29,8 +29,11 @@ class NeuralBot(LoggerBot):
             # is not being used to approximate the same function it's been trained to model.
             # That's why this class inherits from the class LoggerBot-
             #   so we can ensure that logic is replicated exactly.
-            input_vector =\
-                [self.game.turn, self.game.tries, p.index, p.name, self.missions_been_on[p], self.failed_missions_been_on[p]]+self.num_missions_voted_up_with_total_suspect_count[p]+self.num_missions_voted_down_with_total_suspect_count[p]
+            input_vector = [
+                              self.game.turn, self.game.tries, p.index, p.name, self.missions_been_on[p],
+                              self.failed_missions_been_on[p], self.failed_missions_proposed[p]
+                          ] + self.num_missions_voted_up_with_total_suspect_count[p]\
+                          + self.num_missions_voted_down_with_total_suspect_count[p]
             input_vector: List[int] = input_vector[4:]
             # remove the first 4 cosmetic details, as we did when training the neural network
 
@@ -67,11 +70,21 @@ class NeuralBot(LoggerBot):
     def vote(self, team: List[TPlayer]) -> bool:
         spy_probs: Dict[TPlayer, np.float32] = self.calc_player_probabilities_of_being_spy()
         sorted_players_by_trustworthiness: List[TPlayer] = \
-            [k for k, v in sorted(spy_probs.items(), key=lambda item: item[1])]
+            sorted(self.game.players, key=lambda p1: spy_probs[p1])
         if not self.spy:
-            for x in team:
-                if x in sorted_players_by_trustworthiness[-2:]:
-                    return False
+            if self.game.tries == 5:
+                return True
+            if self in team:  # if this bot is in the team, just look at the other players in the team
+                theOthers: List[TPlayer] = team.copy()
+                theOthers.remove(self)
+                sorted_players_by_trustworthiness.remove(self)
+                for p in theOthers:
+                    if p in sorted_players_by_trustworthiness[-2:]:
+                        return False
+            else:
+                for x in team:
+                    if x in sorted_players_by_trustworthiness[-2:]:
+                        return False
             return True
         else:
             return True
