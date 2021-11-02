@@ -1,4 +1,3 @@
-
 from player import Bot, Player
 from game import State
 
@@ -6,11 +5,140 @@ from typing import TypeVar, List, Dict, Set
 
 TPlayer = TypeVar("TPlayer", bound="Player")
 
-class rl18730(Bot):
-    """
-    Rachel's somewhat functional bot for playing The Resistance.
 
-    note: currently not functional.
+class mcts_tree_node(object):
+    """
+    A node in a monte carlo tree search tree.
+    Represents an individual proposal gamestate within a game of The Resistance
+
+    Recalls what index within the tree this index has,
+    along with int pointers to the indexes that hold the nodes
+    which must be navigated to by the tree traversal algorithm
+    when either this proposal is rejected, or when the mission associated with this
+    proposal passes or fails.
+
+    Might try to incorporate an NN into this which analyses, given the gamestate,
+    what is likely to happen at this point (proposal fail/mission pass/mission fail)
+    given the history up to this point, and what the best way to vote for the mission would be.
+    """
+
+    def __init__(self, index: int, voteFailedChild: int, missionPassedChild: int, missionFailedChild: int):
+        self.index = index
+        self.voteFailedChild: int = voteFailedChild
+        self.missionPassedChild: int = missionPassedChild
+        self.missionFailedChild: int = missionFailedChild
+        self.traversals: int = 0
+        self.encountered: int = 0
+
+
+    def __repr__(self):
+        return "Index: {:2d}, Reject {:2d}, Pass {:2d}, Fail {:2d}"\
+            .format(self.index, self.voteFailedChild, self.missionPassedChild, self.missionFailedChild)
+
+
+class mcts_tree(object):
+    """
+    win offset +1
+    loss: offset + 4
+                3
+            2       7
+        1       6       11
+    0       5       10
+        4       9       14
+            8       13
+                12
+
+    here's a crappy visual representation of how I've indexed the gamestates.
+    up: losing. down: winning.
+
+
+    after a loss, next round's attempt indexes follow on from 'currentRoundFinalAttempt + 1'
+    after a win, next round's attempt indexes start from 'currentRoundFinalAttempt + 16'
+    15, 35, 55 are all 'spy victory'.
+    60, 65, 70 are all 'resistance victory'.
+
+    Resistance wants to get to the highest possible index (greedily).
+    Spies want to get to the smallest possible index.
+
+    easiest way of assigning keys to them in a way that might make a little bit of sense.
+    m1  m2  m3  m4  m5
+                15
+            10-14   35
+        5-9     30-34   55
+    0-4     25-29   50-54
+        20-24   45-49   70
+            40-44   65
+                60
+    """
+
+    def __init__(self):
+        self.node_dict: Dict[int, mcts_tree_node] = {}
+        for i in range(0, 11):
+
+            # these groups are reserved for spy win conditions.
+            if i == 3 or i == 7:
+                continue
+
+            i5: int = i * 5
+            i15: int = (i+1) * 5
+            for g in range(i5, i15):
+                # creates a mcts node for the current proposal.
+                # located at index g.
+                # refusing proposal redirects to the node at g+1
+                # failing the mission redirects to the node at i15 (5 ahead of the first index of this group)
+                # passing the mission redirects to the node at 15 + 20 (20 ahead of the first index of this group)
+                self.node_dict[g] = mcts_tree_node(g, g+1, i5 + 20, i15)
+
+
+        for k in [*self.node_dict.keys()]:
+            print("{:2d}: {}".format(k, self.node_dict[k]))
+
+
+mcts = mcts_tree()
+
+
+
+
+
+class mcts_tree_learner_bot(Bot):
+    """
+    Attempts to learn stuff for neural networks that can be used in a MCTS tree
+
+
+
+    loss: offset +1
+    win : offset +4
+                3
+            2       7
+        1       6       11
+    0       5       10
+        4       9       14
+            8       13
+                12
+
+    here's a crappy visual representation of how I've indexed the gamestates.
+    up: losing. down: winning.
+
+
+    after a loss, next round's attempt indexes follow on from 'currentRoundFinalAttempt + 1'
+    after a win, next round's attempt indexes start from 'currentRoundFinalAttempt + 16'
+    15, 35, 55 are all 'spy victory'.
+    60, 65, 70 are all 'resistance victory'.
+
+    Resistance wants to get to the highest possible index.
+    Spies want to get to the lowest possible index.
+
+    easiest way of assigning keys to them in a way that might make a little bit of sense.
+    m1  m2  m3  m4  m5
+                15
+            10-14   35
+        5-9     30-34   55
+    0-4     25-29   50-54
+        20-24   45-49   70
+            40-44   65
+                60
+
+
     """
 
     def __init__(self, game: State, index: int, spy: bool):
@@ -23,7 +151,6 @@ class rl18730(Bot):
         """
         super().__init__(game, index, spy)
 
-        
 
 
     def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
@@ -136,6 +263,5 @@ class rl18730(Bot):
         :param spies:        List of only the spies in the game.
         """
         pass
-
 
 

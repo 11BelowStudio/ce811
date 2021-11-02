@@ -2,16 +2,33 @@
 from player import Bot, Player
 from game import State
 
-from typing import TypeVar, List, Dict, Set
+from typing import List, Set, Dict, Tuple, TypeVar, Iterable
 
-TPlayer = TypeVar("TPlayer", bound="Player")
+TPlayer = TypeVar("TPlayer", bound=Player)
 
-class rl18730(Bot):
+
+class cfrbot(Bot):
     """
-    Rachel's somewhat functional bot for playing The Resistance.
+    An attempt at working out how DeepRole's CFR component works
+    https://github.com/Detry322/DeepRole/blob/master/reference_cfr/mccfr.cpp
 
-    note: currently not functional.
     """
+
+    branching_probability: float = 0.1
+
+    history_size: int = 162 * 21 * 5
+    """
+    162 possible "missions failed with you on it"
+    21 possible missions failed with you proposed
+    5 possible rounds
+    """
+
+    num_possible_proposals: int = 10
+    """
+    10 possible proposals (5 choose 3 and 5 choose 2 are the same)
+    """
+
+    num_evil_viewpoints: 5
 
     def __init__(self, game: State, index: int, spy: bool):
         """Constructor called before a game starts.  It's recommended you don't
@@ -22,9 +39,6 @@ class rl18730(Bot):
         :param spy:      Is this bot meant to be a spy?
         """
         super().__init__(game, index, spy)
-
-        
-
 
     def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
         """This function will be called to list all the players, and if you're
@@ -136,6 +150,3 @@ class rl18730(Bot):
         :param spies:        List of only the spies in the game.
         """
         pass
-
-
-
