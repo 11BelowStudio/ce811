@@ -19,6 +19,11 @@ class Suspicious(Bot):
         Zero means the selection is not suspicious, and positive values indicate
         higher suspicion levels."""
 
+        """
+        Sounds like http://proceedings.mlr.press/v32/agarwalb14.html
+        Taming the Monster: A Fast and Simple Algorithm for Contextual Bandits
+        """
+
         all_spies = self.getSpies(config)
         team_spies = [s for s in self.game.team if s in all_spies]
         if self.game.leader in all_spies and len(team_spies) == 0:

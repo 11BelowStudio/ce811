@@ -20,6 +20,15 @@ class rl18730(Bot):
         :param game:     the current game state
         :param index:    Bot's index in the player list.
         :param spy:      Is this bot meant to be a spy?
+
+        First step: probably trying to get some sort of bayesian classifier working.
+        10 possible role combinations (6 of which need to be worked out if resistance),
+        need to think of how to store a bayesian belief network into a data structure,
+        and how to get code to use it.
+
+        Might need to take another look at the statistician bot, because that appears to use a naive bayes classifier.
+        Or look at exising Python implementations of it for later on.
+
         """
         super().__init__(game, index, spy)
 
