@@ -100,9 +100,15 @@ class Simpleton(Bot):
 class Trickerton(Simpleton):
     """A configuration-based logical reasoning bot with better spy behavior."""
 
-    #def _select(self, configurations):
-       #TODO: If spy, don't select configuration with only spies.
-       # Otherwise, do ancestor's behaviour
+    def _select(self, configurations):
+        tempConfigs = configurations.copy()
+        if self.spy:
+            for c in configurations:
+                if len(self.getResistance(c)) == 0:
+                    tempConfigs.remove(c)
+        # If spy, don't select configuration with only spies.
+        # Otherwise, do ancestor's behaviour
+        return super()._select(tempConfigs)
 
            
     def _vote(self, team):

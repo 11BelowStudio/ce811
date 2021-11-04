@@ -3,6 +3,7 @@ from collections import defaultdict
 
 from player import Bot 
 
+from typing import List, Dict
 
 class Variable(object):
     def __init__(self):
@@ -78,7 +79,7 @@ class Statistician(Bot):
         team = [p for p in players if p.index == self.index]
         while len(team) < count:
             candidates = [p for p in players if p not in team]
-            team.append(self._roulette(zip(candidates, [1.0 - self._estimate(p) for p in candidates])))
+            team.append(self._roulette(list(zip(candidates, [1.0 - self._estimate(p) for p in candidates]))))
         return team
 
     def _roulette(self, candidates):
@@ -89,7 +90,8 @@ class Statistician(Bot):
             current += c[1]
             if current >= threshold:
                 return c[0]
-        assert False, "Could not perform roulete wheel selection."
+        return candidates[0][0]
+        #assert False, "Could not perform roulete wheel selection."
 
     def vote(self, team):
         # Store this for later once we know the spies.
@@ -236,3 +238,33 @@ class Statistician(Bot):
             result += self.global_statistics[player.name].__dict__[a].estimate()
         return result / float(len(attributes))
 
+
+class RankedStatistician(Statistician):
+
+    def _roulette(self, candidates):
+        # actually it's ranked choice selection
+        candidate_len = len(candidates)
+        sorted_candidates = sorted(candidates, key=lambda c: c[1], reverse=True)
+        ranked_pick_weights: List[int] = []
+        for i in range(0, candidate_len):
+            ranked_pick_weights.append(candidate_len - i)
+
+        total_probs: int = sum(ranked_pick_weights)
+
+        rng_choice: int = random.randint(0, total_probs + 1)
+
+        counter: int = 0
+        for j in range(0, len(ranked_pick_weights)):
+            counter += ranked_pick_weights[j]
+            if counter >= rng_choice:
+                return sorted_candidates[j][0]
+        # if the ranked choice fails, just return the 0th candidate
+        return sorted_candidates[0][0]
+
+
+class TStatistician(Statistician):
+    # statistician who uses tournament selection instead
+
+    def _roulette(self, candidates):
+        # actually it's tournament selection
+        return max(random.sample(candidates, min(2, len(candidates))), key=lambda c: c[1])[0]
