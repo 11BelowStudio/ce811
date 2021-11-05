@@ -1,6 +1,7 @@
 # All of the example bots in this file derive from the base Bot class.  See
 # how this is implemented by looking at player.py.  The API is very well
 # documented there.
+import game
 from player import Bot, TPlayer # TPlayer is a type annotation for any subtype of the 'Player' class.
 
 # Each bot has access to the game state, stored in the self.game member
@@ -74,6 +75,10 @@ class CountingBot(Bot):
         for p in players:
             self.failed_missions_been_on[p] = 0
 
+    def onMissionAttempt(self, mission: int, tries: int, leader: TPlayer) -> None:
+        #print("MISSION INFO\n{}".format(self.game))
+        pass
+
     def onMissionComplete(self, sabotaged: int) -> None:
         """
         At the end of a mission, we see if it was sabotaged (and, if it was, we increment the count of
@@ -84,6 +89,7 @@ class CountingBot(Bot):
         :param sabotaged: how many players sabotaged the mission
         :return: nothing
         """
+        #print("MISSION OVER\n{}".format(self.game))
         if sabotaged == 0:
             pass
         else:
@@ -93,6 +99,14 @@ class CountingBot(Bot):
             else:
                 for p in self.game.team:
                     self.failed_missions_been_on[p] += 1
+
+    def onMissionFailed(self, leader: TPlayer, team: List[TPlayer]) -> None:
+        """Callback once a vote did not reach majority, failing the mission.
+        :param leader:       The player responsible for selection.
+        :param team:         The list of players chosen for the mission.
+        """
+        #print("NO NOMINATION\n{}".format(self.game))
+        pass
 
     def select(self, players: List[TPlayer], count: int) -> List[TPlayer]:
         """

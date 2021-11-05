@@ -29,7 +29,7 @@ class State(object):
         """int (1..5): Attempt number."""
         self.wins: int = 0
         """int (0..3): Number of resistance wins."""
-        self.losses = 0
+        self.losses: int = 0
         """int (0..3): Number of spy victories."""
         self.leader: TPlayer = None
         """TPlayer: Current mission leader."""
