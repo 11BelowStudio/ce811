@@ -59,7 +59,6 @@ class CountingBot(Bot):
 
     def __init__(self, game: State, index: int, spy: bool):
         super(CountingBot, self).__init__(game, index, spy)
-
         self.failed_missions_been_on: Dict[TPlayer, int] = {}
         """ A dictionary that keeps count of how many times each player has been on a team that failed."""
 
@@ -157,6 +156,10 @@ class CountingBot(Bot):
 
 class Hippie(Bot):
     """An AI bot that's OK with everything!"""
+
+    def __init__(self, game, index, spy):
+        super().__init__(game, index, spy)
+        # self.log.debug("innit")
 
     def select(self, players, count):
         self.say("Picking some cool dudes to go with me!")

@@ -2,9 +2,236 @@
 from player import Bot, Player
 from game import State
 
-from typing import TypeVar, List, Dict, Set
+from typing import TypeVar, List, Dict, Set, Tuple, Iterable, FrozenSet
 
 TPlayer = TypeVar("TPlayer", bound="Player")
+
+
+class TeamRecord(object):
+    """
+    A record of the teams that have been nominated, who nominated them, whether or not the nomination passed,
+    the outcome of the mission, and who voted in favour of the team.
+
+    Properties are all read-only.
+    """
+
+    def __init__(self,
+                 team: Iterable[TPlayer],
+                 leader: TPlayer,
+                 mission_number: int,
+                 nomination_attempt: int,
+                 nomination_successful: bool,
+                 sabotages: int,
+                 voted_for_team: Iterable[TPlayer]
+                 ):
+        """
+        Constructor for this record of team information
+        :param team: who was on the team?
+        :param leader: who was the leader?
+        :param mission_number: which mission was this for?
+        :param nomination_attempt: which nomination attempt was this?
+        :param nomination_successful: did the nomination pass?
+        :param sabotages: how many times was the mission sabotaged?
+            (will be overwritten by -1 if nomination unsuccessful)
+        :param voted_for_team: who voted in favour of the team?
+        """
+
+        self._team: FrozenSet[TPlayer] = frozenset(team)
+        self._leader: TPlayer = leader
+        self._mission_number: int = mission_number
+        self._nomination_attempt: int = nomination_attempt
+        self._nomination_successful: bool = nomination_successful
+        self._sabotages: int = sabotages if nomination_successful else -1
+        self._voted_for_team: FrozenSet[TPlayer] = frozenset(voted_for_team)
+
+    @property
+    def team(self) -> FrozenSet[TPlayer]:
+        """Who was on the team?"""
+        return self._team
+
+    @property
+    def leader(self) -> TPlayer:
+        """Who nominated the team?"""
+        return self._leader
+
+    @property
+    def mission_number(self) -> int:
+        """What mission was this for?"""
+        return self._mission_number
+
+    @property
+    def nomination_attempt(self) -> int:
+        """Which nomination was this?"""
+        return self._nomination_attempt
+
+    @property
+    def nomination_successful(self) -> bool:
+        """Did the nomination pass?"""
+        return self._nomination_successful
+
+    @property
+    def sabotages(self) -> int:
+        """How many times was the mission sabotaged? (-1 if it didn't happen)"""
+        return self._sabotages
+
+    @property
+    def voted_for_team(self) -> FrozenSet[TPlayer]:
+        """Who voted in favour of the team?"""
+        return self._voted_for_team
+
+
+
+class GamestateTree(object):
+    """
+    In short, this is a data structure which exists to store gamestate info as an int,
+    index a tree of possible gamestates,
+    and also
+
+    win offset + 3
+    loss: offset - 1
+
+                -3
+            -2      -3 (0)
+        -1      1       -3 (3)
+    0       2       4
+        3       5       9  (7)
+            6       9   (8)
+                9
+
+
+                -15
+            -10     -15 (0)
+        -5      5       -15 (15)
+    0       10       20
+        15      25       35
+            30       35 (40)
+                35 (45)
+
+    here's a crappy visual representation of how I've indexed the gamestates.
+    up: losing. down: winning.
+
+
+    after a loss, next round's attempt indexes follow on from 'currentRoundFinalAttempt + 1'
+    after a win, next round's attempt indexes start from 'currentRoundFinalAttempt + 16'
+    15, 35, 55 are all 'spy victory'.
+    60, 65, 70 are all 'resistance victory'.
+
+    Resistance wants to get to the highest possible index (greedily).
+    Spies want to get to the smallest possible index.
+
+    easiest way of assigning keys to them in a way that might make a little bit of sense.
+    m1  m2  m3  m4  m5
+                15 (spy win)
+            10-14   35 (spy win)
+        5-9     30-34   55 (spy win)
+    0-4     25-29   50-54
+        20-24   45-49   70 (resistance win)
+            40-44   65 (resistance win)
+                60 (resistance win)
+    """
+
+    class gamestate_tree_node(object):
+        """
+        Attempts to
+
+        Recalls what index within the tree this index has,
+        along with int pointers to the indexes that hold the nodes
+        which must be navigated to by the tree traversal algorithm
+        when either this proposal is rejected, or when the mission associated with this
+        proposal passes or fails.
+
+        Might try to incorporate an NN into this which analyses, given the gamestate,
+        what is likely to happen at this point (proposal fail/mission pass/mission fail)
+        given the history up to this point, and what the best way to vote for the mission would be.
+        """
+
+        def __init__(self, index: int, voteFailedChild: int, missionPassedChild: int, missionFailedChild: int):
+            self._index = index
+            self._voteFailedChild: int = voteFailedChild
+            self._missionPassedChild: int = missionPassedChild
+            self._missionFailedChild: int = missionFailedChild
+            self._traversals: int = 0
+            self._encountered: int = 0
+
+        def __repr__(self):
+            return "Index: {:2d}, Reject {:2d}, Pass {:2d}, Fail {:2d}" \
+                .format(self._index, self._voteFailedChild, self._missionPassedChild, self._missionFailedChild)
+
+        @property
+        def index(self) -> int:
+            """index of this node"""
+            return self._index
+
+    _spy_win_offset: int = -5
+    """Offset for spy wins"""
+    _res_win_offset: int = 15
+    """Offset for resistance wins"""
+
+    _spy_win_state_indices: Tuple[int, int, int] = (15, 35, 55)
+    """Indices of spy win states"""
+    _res_win_state_indices: Tuple[int, int, int] = (60, 65, 70)
+    """Indices of resistance win states"""
+
+    _node_dict: Dict[int, "GamestateTree.gamestate_tree_node"] = {}
+    for i in range(-3, 7):
+        # 11 'groups' of actual gamestates that matter (0-55 are nomination states (except 15-35)
+
+        # these groups are reserved for spy win conditions.
+        if i == -1:
+            continue
+
+        nom1: int = i * 5
+        rangeEnd: int = nom1 + 5
+        step: int = 1
+
+        if i < 0:
+            step = rangeEnd
+            rangeEnd = nom1
+            nom1 = step
+            step = -1
+
+        nomination1: int = i * 5
+        spy_win: int = nomination1 + _spy_win_offset
+        for g in range(nom1, rangeEnd, step):
+            # creates a gamestate index node for the current proposal.
+            # located at index g.
+            # refusing proposal redirects to the node at g+1
+            # failing the mission redirects to the node at i15 (5 ahead of the first index of this group)
+            # passing the mission redirects to the node at 15 + 20 (20 ahead of the first index of this group)
+
+            # TODO: actually it might make more sense to have all the individual failed nominations go to a -1,
+            #       because failed vote means potential loss of utility to resistance, closer to spy win, etc?
+            spyWinIndex = nom1 - 5
+            if spyWinIndex == 0 or spyWinIndex == 15:
+                spyWinIndex = -15
+            resWinIndex = nom1 + 15
+            if resWinIndex > 30:
+                resWinIndex = 35
+
+            failIndex = g + step
+            if failIndex == rangeEnd:
+                failIndex = spyWinIndex
+
+            _node_dict[g] = gamestate_tree_node(g, failIndex, resWinIndex, spyWinIndex)
+
+
+    def to_gamestate_index(self, res_wins: int, spy_wins: int, nomination_attempt: int) -> int:
+        what_round: int = (res_wins * GamestateTree._res_win_offset) + (spy_wins * GamestateTree._spy_win_offset)
+
+        if what_round < 0:
+            return what_round - nomination_attempt
+        else:
+            return what_round + nomination_attempt
+
+
+for k in [*GamestateTree._node_dict.keys()]:
+    print("{:3d}: {}".format(k, GamestateTree._node_dict[k]))
+
+
+
+
+
+
 
 class rl18730(Bot):
     """
@@ -21,6 +248,8 @@ class rl18730(Bot):
         :param index:    Bot's index in the player list.
         :param spy:      Is this bot meant to be a spy?
 
+        Note to self: init appears to be called at the start of every game that this bot is in.
+
         First step: probably trying to get some sort of bayesian classifier working.
         10 possible role combinations (6 of which need to be worked out if resistance),
         need to think of how to store a bayesian belief network into a data structure,
@@ -32,7 +261,11 @@ class rl18730(Bot):
         """
         super().__init__(game, index, spy)
 
-        
+        self.spies: Set[TPlayer] = set()
+        """Set of known spies (empty unless spy)"""
+
+        self.team_records: Dict[int, TeamRecord]
+
 
 
     def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
@@ -41,6 +274,7 @@ class rl18730(Bot):
         :param players:  List of all players in the game including you.
         :param spies:    List of players that are spies (if you are a spy), or an empty list (if you aren't a spy).
         """
+
         pass
 
     def onMissionAttempt(self, mission: int, tries: int, leader: TPlayer) -> None:

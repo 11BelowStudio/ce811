@@ -6,35 +6,6 @@ from typing import TypeVar, List, Dict, Set
 TPlayer = TypeVar("TPlayer", bound="Player")
 
 
-class mcts_tree_node(object):
-    """
-    A node in a monte carlo tree search tree.
-    Represents an individual proposal gamestate within a game of The Resistance
-
-    Recalls what index within the tree this index has,
-    along with int pointers to the indexes that hold the nodes
-    which must be navigated to by the tree traversal algorithm
-    when either this proposal is rejected, or when the mission associated with this
-    proposal passes or fails.
-
-    Might try to incorporate an NN into this which analyses, given the gamestate,
-    what is likely to happen at this point (proposal fail/mission pass/mission fail)
-    given the history up to this point, and what the best way to vote for the mission would be.
-    """
-
-    def __init__(self, index: int, voteFailedChild: int, missionPassedChild: int, missionFailedChild: int):
-        self.index = index
-        self.voteFailedChild: int = voteFailedChild
-        self.missionPassedChild: int = missionPassedChild
-        self.missionFailedChild: int = missionFailedChild
-        self.traversals: int = 0
-        self.encountered: int = 0
-
-
-    def __repr__(self):
-        return "Index: {:2d}, Reject {:2d}, Pass {:2d}, Fail {:2d}"\
-            .format(self.index, self.voteFailedChild, self.missionPassedChild, self.missionFailedChild)
-
 
 class mcts_tree(object):
     """
@@ -62,36 +33,91 @@ class mcts_tree(object):
 
     easiest way of assigning keys to them in a way that might make a little bit of sense.
     m1  m2  m3  m4  m5
-                15
-            10-14   35
-        5-9     30-34   55
+                15 (spy win)
+            10-14   35 (spy win)
+        5-9     30-34   55 (spy win)
     0-4     25-29   50-54
-        20-24   45-49   70
-            40-44   65
-                60
+        20-24   45-49   70 (resistance win)
+            40-44   65 (resistance win)
+                60 (resistance win)
     """
 
     def __init__(self):
-        self.node_dict: Dict[int, mcts_tree_node] = {}
-        for i in range(0, 11):
+        self.node_dict: Dict[int, "mcts_tree_node"] = {}
+        #for i in range(0, 11):
+        for i in range(-3, 7):
 
-            # these groups are reserved for spy win conditions.
-            if i == 3 or i == 7:
+            if i == -1:
                 continue
 
+            # these groups are reserved for spy win conditions.
+            #if i == 3 or i == 7:
+            #    continue
+
             i5: int = i * 5
-            i15: int = (i+1) * 5
-            for g in range(i5, i15):
+            i15: int = i5 + 5
+            step: int = 1
+            negativeAdjustment: int = 0
+
+            if i < 0:
+                step = i15
+                i15 = i5
+                i5 = step
+                step = -1
+                #negativeAdjustment = -4
+
+            print(range(i5, i15, step))
+
+            for g in range(i5, i15, step):
                 # creates a mcts node for the current proposal.
                 # located at index g.
                 # refusing proposal redirects to the node at g+1
                 # failing the mission redirects to the node at i15 (5 ahead of the first index of this group)
                 # passing the mission redirects to the node at 15 + 20 (20 ahead of the first index of this group)
-                self.node_dict[g] = mcts_tree_node(g, g+1, i5 + 20, i15)
+                spyWinIndex = i5 - 5
+                if spyWinIndex == 0 or spyWinIndex == 15:
+                    spyWinIndex = -15
+                resWinIndex = i5 + 15
+                if resWinIndex > 30:
+                    resWinIndex = 35
+
+                failIndex = g+step
+                if failIndex == i15:
+                    failIndex = spyWinIndex
+
+                self.node_dict[g] = mcts_tree.mcts_tree_node(g, failIndex, resWinIndex, spyWinIndex)
 
 
         for k in [*self.node_dict.keys()]:
-            print("{:2d}: {}".format(k, self.node_dict[k]))
+            print("{:3d}: {}".format(k, self.node_dict[k]))
+
+    class mcts_tree_node(object):
+        """
+        A node in a monte carlo tree search tree.
+        Represents an individual proposal gamestate within a game of The Resistance
+
+        Recalls what index within the tree this index has,
+        along with int pointers to the indexes that hold the nodes
+        which must be navigated to by the tree traversal algorithm
+        when either this proposal is rejected, or when the mission associated with this
+        proposal passes or fails.
+
+        Might try to incorporate an NN into this which analyses, given the gamestate,
+        what is likely to happen at this point (proposal fail/mission pass/mission fail)
+        given the history up to this point, and what the best way to vote for the mission would be.
+        """
+
+        def __init__(self, index: int, voteFailedChild: int, missionPassedChild: int, missionFailedChild: int):
+            self.index = index
+            self.voteFailedChild: int = voteFailedChild
+            self.missionPassedChild: int = missionPassedChild
+            self.missionFailedChild: int = missionFailedChild
+            self.traversals: int = 0
+            self.encountered: int = 0
+
+        def __repr__(self):
+            return "Index: {:3d}, Reject {:3d}, Pass {:3d}, Fail {:3d}" \
+                .format(self.index, self.voteFailedChild, self.missionPassedChild, self.missionFailedChild)
 
 
 mcts = mcts_tree()
