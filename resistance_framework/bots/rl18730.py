@@ -221,10 +221,16 @@ class GamestateTree(object):
             self._voteFailedChild: int = voteFailedChild
             self._missionPassedChild: int = missionPassedChild
             self._missionFailedChild: int = missionFailedChild
+            self._team_size: int = 3
+            indMinus1Mod5: int = (index - 1) % 5
+            if indMinus1Mod5 > 4 and index - indMinus1Mod5 != 11:
+                # basically everything that's range(0, -5, -1) has a team size of 2, except range(20, 16, -1)
+                self._team_size = 2
 
         def __str__(self):
-            return "Index: {:3d}, Reject {:3d}, Pass {:3d}, Fail {:3d}" \
-                .format(self._index, self._voteFailedChild, self._missionPassedChild, self._missionFailedChild)
+            return "Index: {:3d}, Reject {:3d}, Pass {:3d}, Fail {:3d}, Team {:2d}" \
+                .format(self._index, self._voteFailedChild, self._missionPassedChild,
+                        self._missionFailedChild, self._team_size)
 
         @property
         def index(self) -> int:
@@ -253,6 +259,11 @@ class GamestateTree(object):
             (final nomination attempt).
             """
             return self._missionFailedChild == self._voteFailedChild
+
+        @property
+        def team_size(self) -> int:
+            """The size of the team for this mission"""
+            return self._team_size
 
     _spy_win_offset: int = -5
     """Offset for spy wins"""
@@ -390,12 +401,15 @@ class GamestateTree(object):
     def get_team_size_from_index(cls, ind: int) -> int:
         """Returns the team size for the gamestate at the given index.
         If given gamestate is not a known gamestate, this just returns 3 instead because I'm lazy."""
-
-        indMinus1Mod5: int = (ind-1) % 5
-        if indMinus1Mod5 > 4 and ind - indMinus1Mod5 != 11:
-            # basically everything that's range(0, -5, -1) has a team size of 2, except range(20, 16, -1)
-            return 2
-        return 3
+        # indMinus1Mod5: int = (ind-1) % 5
+        # if indMinus1Mod5 > 4 and ind - indMinus1Mod5 != 11:
+        #    # basically everything that's range(0, -5, -1) has a team size of 2, except range(20, 16, -1)
+        #    return 2
+        # return 3
+        if ind in cls._node_dict.keys():
+            return cls._node_dict[ind].team_size
+        else:
+            return 3
 
     @classmethod
     def get_raw_regret_from_index(cls, ind: int) -> Tuple[int, int, int]:
@@ -455,7 +469,7 @@ class PlayerRecord(object):
         self._p: TPlayer = p
         """Who this player is"""
 
-        self._all_missions_and_sabotages: Dict[int, int] = {}
+        self._all_missions_and_sabotages_with_teams: Dict[int, Tuple[int, int]] = {}
         """
         Dictionary of mission IDs with sabotage counts.
         (ID, sabotage count)
@@ -486,11 +500,12 @@ class PlayerRecord(object):
         self._is_spy: bool = None
         """IMPORTANT: DO NOT GIVE THIS A VALUE UNTIL KNOWN, FOR SURE, WHETHER THIS PLAYER WAS A SPY"""
 
-    def post_round_update(self, index: int, sab: int, was_leader: bool,
+    def post_round_update(self, index: int, sab: int, team_size: int, was_leader: bool,
                           was_on_team: bool, voted_for_team: bool) -> None:
         """
         Call this to update the player info with the data for each round.
         :param index: mission ID (via GamestateTree indices)
+        :param team_size: how many members were on the team
         :param sab: sabotage count (-1 if team rejected)
         :param was_leader: true if this player was the leader of the team.
         :param was_on_team: true if this player was leading this team.
@@ -498,7 +513,7 @@ class PlayerRecord(object):
         :return: nothing.
         """
 
-        self._all_missions_and_sabotages[index] = sab
+        self._all_missions_and_sabotages_with_teams[index] = (sab, team_size)
 
         if was_leader:
             self._missions_lead.append(index)
@@ -529,6 +544,11 @@ class PlayerRecord(object):
         return self._p
 
     @property
+    def pname(self) -> str:
+        """The name of the player this stats object is recording data for"""
+        return self._p.name
+
+    @property
     def is_spy(self) -> bool:
         """Whether or not this player is a spy. Returns None if not known for sure yet."""
         return self._is_spy
@@ -541,17 +561,31 @@ class PlayerRecord(object):
     @property
     def passed_missions_lead(self) -> List[int]:
         """All passed missions that this player lead"""
-        return [m for m in self._missions_lead if self._all_missions_and_sabotages[m] == 0]
+        return [m for m in self._missions_lead if self._all_missions_and_sabotages_with_teams[m][0] == 0]
 
     @property
     def failed_missions_lead(self) -> List[int]:
         """All failed missions that this player lead"""
-        return [m for m in self._missions_lead if self._all_missions_and_sabotages[m] > 0]
+        return [m for m in self._missions_lead if self._all_missions_and_sabotages_with_teams[m][0] > 0]
+
+    @property
+    def mission_teams_lead_sus_levels(self) -> List[Tuple[int, float]]:
+        """finds all non-rejected teams lead, and returns a list of [id for that gamestate, sabotages/participants]"""
+        teams_sus: List[Tuple[int, float]] = []
+        for t in self._missions_lead:
+            sabs = self._all_missions_and_sabotages_with_teams[t]
+            if t == -1:
+                continue
+            elif t == 0:
+                teams_sus.append((t, sabs[0]))
+            else:
+                teams_sus.append((t, sabs[0]/sabs[1]))
+        return teams_sus
 
     @property
     def rejected_missions_lead(self) -> List[int]:
         """All rejected teams that this player nominated"""
-        return [m for m in self._missions_lead if self._all_missions_and_sabotages[m] == -1]
+        return [m for m in self._missions_lead if self._all_missions_and_sabotages_with_teams[m][0] == -1]
 
     @property
     def teams_been_on(self) -> List[int]:
@@ -561,17 +595,31 @@ class PlayerRecord(object):
     @property
     def passed_teams_been_on(self) -> List[int]:
         """All passed missions that this player was on"""
-        return [m for m in self._teams_been_on if self._all_missions_and_sabotages[m] == 0]
+        return [m for m in self._teams_been_on if self._all_missions_and_sabotages_with_teams[m][0] == 0]
 
     @property
     def failed_teams_been_on(self) -> List[int]:
         """All failed missions that this player was on"""
-        return [m for m in self._teams_been_on if self._all_missions_and_sabotages[m] > 0]
+        return [m for m in self._teams_been_on if self._all_missions_and_sabotages_with_teams[m][0] > 0]
+
+    @property
+    def mission_teams_been_on_sus_levels(self) -> List[Tuple[int, float]]:
+        """finds all non-rejected teams been on, and returns a list of [id for that gamestate, sabotages/participants]"""
+        teams_sus: List[Tuple[int, float]] = []
+        for t in self._teams_been_on:
+            sabs = self._all_missions_and_sabotages_with_teams[t]
+            if t == -1:
+                continue
+            elif t == 0:
+                teams_sus.append((t, sabs[0]))
+            else:
+                teams_sus.append((t, sabs[0]/sabs[1]))
+        return teams_sus
 
     @property
     def rejected_teams_been_on(self) -> List[int]:
         """All rejected teams that this player was on"""
-        return [m for m in self._teams_been_on if self._all_missions_and_sabotages[m] == -1]
+        return [m for m in self._teams_been_on if self._all_missions_and_sabotages_with_teams[m][0] == -1]
 
     @property
     def teams_approved(self) -> List[int]:
@@ -581,17 +629,17 @@ class PlayerRecord(object):
     @property
     def passed_teams_approved(self) -> List[int]:
         """All passed missions that this player voted for"""
-        return [m for m in self._teams_approved if self._all_missions_and_sabotages[m] == 0]
+        return [m for m in self._teams_approved if self._all_missions_and_sabotages_with_teams[m][0] == 0]
 
     @property
     def failed_teams_approved(self) -> List[int]:
         """All failed missions that this player voted for"""
-        return [m for m in self._teams_approved if self._all_missions_and_sabotages[m] > 0]
+        return [m for m in self._teams_approved if self._all_missions_and_sabotages_with_teams[m][0] > 0]
 
     @property
     def rejected_teams_approved(self) -> List[int]:
         """All rejected teams that this player voted for"""
-        return [m for m in self._teams_approved if self._all_missions_and_sabotages[m] == -1]
+        return [m for m in self._teams_approved if self._all_missions_and_sabotages_with_teams[m][0] == -1]
 
     @property
     def teams_rejected(self) -> List[int]:
@@ -601,17 +649,17 @@ class PlayerRecord(object):
     @property
     def passed_teams_rejected(self) -> List[int]:
         """All passed missions that this player voted against"""
-        return [m for m in self._teams_rejected if self._all_missions_and_sabotages[m] == 0]
+        return [m for m in self._teams_rejected if self._all_missions_and_sabotages_with_teams[m][0] == 0]
 
     @property
     def failed_teams_rejected(self) -> List[int]:
         """All failed missions that this player voted against"""
-        return [m for m in self._teams_rejected if self._all_missions_and_sabotages[m] > 0]
+        return [m for m in self._teams_rejected if self._all_missions_and_sabotages_with_teams[m][0] > 0]
 
     @property
     def rejected_teams_rejected(self) -> List[int]:
         """All rejected teams that this player voted against"""
-        return [m for m in self._teams_rejected if self._all_missions_and_sabotages[m] == -1]
+        return [m for m in self._teams_rejected if self._all_missions_and_sabotages_with_teams[m][0] == -1]
 
     @property
     def hammer_votes(self) -> List[Tuple[int, bool]]:
@@ -632,21 +680,46 @@ class PlayerRecord(object):
         hammer: List[int] = GamestateTree.get_hammer_indices()
         return [v for v in self._teams_rejected if v in hammer]
 
-    @property
-    def spy_probability(self, current_round_index: int = -1) -> float:
+    def simple_spy_probability(self, everything_before_round: int = -1) -> float:
         """
         Works out how likely this player is to be a spy, given their actions until the current round.
-        :param current_round_index: Index of the current round (GamestateTree index). Defaults to -1.
+        :param everything_before_round: Current round (rounds since game start). Defaults to -1
         If negative/unspecified/not an index of a round that has been reached, takes everything
-        known so far into account
+        known so far into account. If specified (value of n), takes everything up before the nth round into account.
 
         :return: a float indicating how suspicious this player currently is.
+        If there's no data yet, their sus level is 0.5
+        If they have rejected a hammer vote, their sus level is 1
+        otherwise,
+        ((sabotages on lead missions * lead missions) + (sabotages on attended missions * attended)) / (lead * attended)
         """
-        if len(self._all_missions_and_sabotages) == 0:
+
+        # TODO more refined calculations of suspiciousness?
+        #  Could try to use some neural networks/bayesian belief stuff/etc.
+        #  maybe factoring in votes?
+
+
+        if everything_before_round > 0:  # if negative value given, we take everything so far into account
+            everything_before_round = len(self._all_missions_and_sabotages_with_teams)
+        if len([self._all_missions_and_sabotages_with_teams[:everything_before_round]]) == 0:
+            return 0.5  # 0.5 suspicion if no data
+
+        if len(self.hammers_thrown) > 0:
+            return 1  # only a spy would throw a hammer vote.
+
+        lead_sus: List[Tuple[int, float]] = self.mission_teams_lead_sus_levels[:everything_before_round]
+        has_lead_missions: bool = len([lead_sus]) > 0
+
+        been_on_sus: List[Tuple[int, float]] = self.mission_teams_been_on_sus_levels[:everything_before_round]
+
+        has_been_on_missions: bool = len([been_on_sus]) > 0
+
+        if has_lead_missions or has_been_on_missions:
+            lead_len = len([lead_sus])
+            been_len = len([been_on_sus])
+            return (sum([lead_sus]) * lead_len) + (sum([been_on_sus]) * been_len) / (lead_len + been_len)
+        else:
             return 0.5
-
-        # TODO actual calculations of suspiciousness. Could try to use some neural networks/bayesian belief stuff/etc.
-
 
 
 class rl18730(Bot):
@@ -703,6 +776,9 @@ class rl18730(Bot):
         A dictionary to hold PlayerRecord objects for all the individual players.
         """
 
+        self.leader_order: List[TPlayer] = []
+        """Keeps track of the order of leaders (0->1st leader, 4->final (has hammer))"""
+
     def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
         """This function will be called to list all the players, and if you're
         a spy, the spies too -- including others and yourself.
@@ -732,6 +808,12 @@ class rl18730(Bot):
 
         self.temp_team_record.reset_at_round_start(leader, mission, tries)
 
+        # work out the order of leaders for this mission if this is the 1st attempt (start of a new mission)
+        if tries == 1:
+            self.leader_order.clear()
+            for i in range(0, 4):
+                self.leader_order.append(self.game.players[(leader.index + i) % len(self.game.players)])
+
         pass
 
     def select(self, players: List[TPlayer], count: int) -> List[TPlayer]:
@@ -740,7 +822,28 @@ class rl18730(Bot):
         :param count:    The number of players you must now select.
         :return: list    The players selected for the upcoming mission.
         """
-        return players[:count]
+
+        team_list: List[TPlayer] = [self]
+
+        if self.game.turn == 1:  # if turn 1, we pick the next leader to join us.
+            team_list.append(self.game.players[(self.index + 1) % len(self.game.players)])
+            return team_list
+
+        player_suspicions: Dict[TPlayer, float] = {}
+        for p in self.others():
+            player_suspicions[p] = self.player_records[p].simple_spy_probability()
+
+        #return [self] + players[:count - 1]
+
+        while len(team_list) < count:
+            min_sus = min(player_suspicions.items())
+            for p in [*player_suspicions.keys()]:
+                if player_suspicions[p] == min_sus:
+                    team_list.append(p)
+                    player_suspicions.pop(p)
+                    break
+        return team_list
+
 
     def onTeamSelected(self, leader: TPlayer, team: List[TPlayer]) -> None:
         """Called immediately after the team is selected to go on a mission,
@@ -786,12 +889,17 @@ class rl18730(Bot):
         function is only called if you're a spy, otherwise you have no choice.
         :return: bool        Yes to shoot down a mission.
         """
+        spies_in_team: List[TPlayer] = [p for p in self.game.team if p in self.spies]
+        if len(spies_in_team) > 1:
+            # TODO: work out probability of other spies in team sabotaging
+            pass
         return True
 
     def onMissionComplete(self, sabotaged: int) -> None:
         """Callback once the players have been chosen.
         :param sabotaged:    Integer how many times the mission was sabotaged.
         """
+        self.temp_team_record.add_mission_outcome_info(sabotaged)
         self._post_mission_housekeeping()
         pass
 
@@ -821,6 +929,7 @@ class rl18730(Bot):
             self.player_records[p].post_round_update(
                 self.current_gamestate,
                 this_round_record.sabotages,
+                len(self.game.team),
                 p == this_round_record.leader,
                 p in this_round_record.team,
                 p in this_round_record.voted_for_team
