@@ -34,64 +34,77 @@ small_maze=[[1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1]
 
 import numpy as np
 
+from typing import List, Tuple, Dict
 
-def calculate_neighboring_nodes(node,maze):
+
+def calculate_neighboring_nodes(node: Tuple[int, int], maze: List[List[int]]) -> Dict[Tuple[int, int], int]:
     # for any node (y,x), calculates a dictionary of which nodes are neighbours in this maze array?
-    maze_height=len(maze)
-    maze_width=len(maze[0])
-    directions=[(1,0),(-1,0),(0,1),(0,-1)]
-    (y,x)=node
-    result_neigbours={}
+    # keys: nodes which are neighbours
+    # values: their distances
+    maze_height: int = len(maze)
+    maze_width: int = len(maze[0])
+    directions: List[Tuple[int, int]] = [(1, 0) , (-1, 0),(0,1),(0,-1)]
+    (y, x) = node
+    result_neigbours: Dict[Tuple[int, int], int] = {}
     for (dy,dx) in directions:
-        neighbour_y=y+dy
-        neighbour_x=x+dx
+        neighbour_y = y+dy
+        neighbour_x = x+dx
         # check if this potential neighbour goes off the edges of the maze:
         if neighbour_y>=0 and neighbour_y<maze_height and neighbour_x>=0 and neighbour_x<maze_width:
             # check if this potential neighbour is not a wall:
-            if maze[neighbour_y][neighbour_x]==0:
+            if maze[neighbour_y][neighbour_x] == 0:
                 # we have found a valid neighbouring node that is not a wall
-                result_neigbours[(neighbour_y,neighbour_x)]=1 # this says the distance to this neighbour is 1
-                # Note that all neighbours in thisproblem are distance 1 away!
+                result_neigbours[(neighbour_y, neighbour_x)] = 1 # this says the distance to this neighbour is 1
+                # Note that all neighbours in this problem are distance 1 away!
     return result_neigbours
 
 
 
-def solve_maze(maze, start_node, end_node):
+def solve_maze(maze: List[List[int]], start_node: Tuple[int, int], end_node: Tuple[int, int]):
     # on entry, maze is a nested list (2d-array) of 1s and 0s indicating maze walls and corridors respectively.
-    maze_height=len(maze)
-    maze_width=len(maze[0])
+    maze_height: int =len(maze)
+    maze_width: int =len(maze[0])
     assert maze[start_node[0]][start_node[1]]==0 # start node must point to a zero of the maze array
     assert maze[end_node[0]][end_node[1]]==0 # end node must point to a zero of the maze array
 
     # identify all nodes of the graph.  A node is a tuple object (y,x) corresponding to the location of the node in the maze.
-    nodes=[(y,x) for x in range(maze_width)for y in range(maze_height)  if maze[y][x]==0]
+    nodes: List[Tuple[int, int]] = [(y,x) for x in range(maze_width)for y in range(maze_height) if maze[y][x]==0]
     print("nodes:",nodes) 
     # store all of each node's immediate neighbours in a dictionary for speedy reference:                
-    neighbouring_nodes={node:calculate_neighboring_nodes(node,maze) for node in nodes} 
+    neighbouring_nodes: Dict[Tuple[int, int], Dict[Tuple[int, int], int]] = {node: calculate_neighboring_nodes(node,maze) for node in nodes}
     # The above line builds our "graph" of nodes and connections.  
     # Each connection is length 1 - which is rather inefficient.  Maybe we 
     # could skip lots of nodes which form a long corridor? 
     # See https://www.youtube.com/watch?v=rop0W4QDOUI for a discussion of one way to do that.
-    print("neighbouring_nodes1:",neighbouring_nodes)
+    print("neighbouring_nodes1:", neighbouring_nodes)
                                
 
     # Now implement Dijkstra's algorithm
-    open_nodes=[start_node] # seed the flood-fill search to expand from here.
-    parentNodes={start_node: None} # These hold which node precedes this one on the best route.
-    nodeGValues={start_node: 0} # These hold the distance of each node from the start node.
-    closed_list = [] # List of nodes that are completely finished
+    open_nodes: List[Tuple[int, int]] = [start_node] # seed the flood-fill search to expand from here.
+    parentNodes: Dict[Tuple[int, int], Tuple[int, int]] = {start_node: None} # These hold which node precedes this one on the best route.
+    nodeGValues: Dict[Tuple[int, int], int] = {start_node: 0} # These hold the distance of each node from the start node.
+    closed_list: List[Tuple[int, int]] = [] # List of nodes that are completely finished
 
-    while len(open_nodes)>0:
-        sorted_list_of_open_nodes_nodes=sorted(open_nodes, key = lambda n: nodeGValues[n]) # this sorts the open_nodes nodes list by gValues first.
-        current_node = sorted_list_of_open_nodes_nodes[0] # this pulls off the first (i.e. shortest-distance) open_nodes item.
-        current_distance=nodeGValues[current_node]
+    while len(open_nodes) > 0:
+        sorted_list_of_open_nodes_nodes: List[Tuple[int, int]] = sorted(open_nodes, key = lambda n: nodeGValues[n]) # this sorts the open_nodes nodes list by gValues first.
+        current_node: Tuple[int, int] = sorted_list_of_open_nodes_nodes[0] # this pulls off the first (i.e. shortest-distance) open_nodes item.
+        current_distance: int = nodeGValues[current_node]
         closed_list.append(current_node)
         open_nodes.remove(current_node)
         #consider all of the neighbours of the current node:
         for neighbour_node, neighbour_distance in neighbouring_nodes[current_node].items():
-            # TODO insert code here for the core part of Dijkstra's algorithm
 
+            if neighbour_node in closed_list:
+                continue
+            temp_gscore: int = current_distance + neighbour_distance
 
+            if neighbour_node not in open_nodes or temp_gscore < nodeGValues[neighbour_node]:
+                parentNodes[neighbour_node] = current_node
+                nodeGValues[neighbour_node] = temp_gscore
+                if neighbour_node not in open_nodes:
+                    open_nodes.append(neighbour_node)
+
+            pass
 
 
     # Now dijkstra's algorithm is finished.
