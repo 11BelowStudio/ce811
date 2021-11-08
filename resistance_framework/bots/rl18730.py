@@ -5,6 +5,9 @@ from typing import TypeVar, List, Dict, Set, Tuple, Iterable, FrozenSet
 
 TPlayer = TypeVar("TPlayer", bound="Player")
 
+# Hi, my name is Rachel, and welcome to Jackass.
+# at least there are type annotations :^)
+
 
 class TeamRecord(object):
     """
@@ -79,7 +82,7 @@ class TeamRecord(object):
         return self._voted_for_team
 
     def __str__(self):
-        """Formats this as a string"""
+        """Formats this as a string, shamelessly lifted from the game.State class"""
         output: str = "<TeamRecord\n"
         for key in sorted(self.__dict__):
             value = self.__dict__[key]
@@ -197,6 +200,7 @@ class GamestateTree(object):
                 35 (resistance win)
     """
 
+    # yep. we got an an inner class. brace yourself, it gets worse.
     class GamestateTreeNode(object):
         """
         Contains indexes of what gamestate nodes this gamestate can lead to
@@ -355,6 +359,7 @@ class GamestateTree(object):
         """
         return cls._node_dict[index]
 
+    # my face mfw static properties aren't a thing in 3.8 i crie evertiem
     @classmethod
     def get_res_win_index(cls) -> int:
         """Get the index associated with the resistance winning"""
@@ -392,8 +397,6 @@ class GamestateTree(object):
             return 2
         return 3
 
-
-
     @classmethod
     def get_raw_regret_from_index(cls, ind: int) -> Tuple[int, int, int]:
         """
@@ -424,6 +427,7 @@ try:
     delattr(GamestateTree, "step")
 except Exception:
     pass
+
 
 class PlayerRecord(object):
     """
@@ -516,6 +520,8 @@ class PlayerRecord(object):
         :return: nothing
         """
         self._is_spy = actually_is_spy
+
+    # got so many properties here its looking like a monopoly board
 
     @property
     def p(self) -> TPlayer:
@@ -786,7 +792,7 @@ class rl18730(Bot):
         """Callback once the players have been chosen.
         :param sabotaged:    Integer how many times the mission was sabotaged.
         """
-        self.temp_team_record.add_mission_outcome_info(sabotaged)
+        self._post_mission_housekeeping()
         pass
 
     def onMissionFailed(self, leader: TPlayer, team: List[TPlayer]) -> None:
@@ -795,8 +801,8 @@ class rl18730(Bot):
         :param team:         The list of players chosen for the mission.
         """
 
+        self._post_mission_housekeeping()
         pass
-
 
     def _post_mission_housekeeping(self) -> None:
         """
@@ -809,10 +815,12 @@ class rl18730(Bot):
         """
         this_round_record: TeamRecord = self.temp_team_record.generate_teamrecord_from_data()
 
-        index_sabotage_tuple: Tuple[int, int] = (self.current_gamestate, this_round_record.sabotages)
+        # index_sabotage_tuple: Tuple[int, int] = (self.current_gamestate, this_round_record.sabotages)
+
         for p in self.game.players:
             self.player_records[p].post_round_update(
-                index_sabotage_tuple,
+                self.current_gamestate,
+                this_round_record.sabotages,
                 p == this_round_record.leader,
                 p in this_round_record.team,
                 p in this_round_record.voted_for_team
