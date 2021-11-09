@@ -162,7 +162,6 @@ class GamestateTree(object):
 
     Everything in here is all static-read only stuff, used for reference by everything else.
 
-
     win offset + 3
     loss: offset - 1
 
@@ -184,6 +183,9 @@ class GamestateTree(object):
     after a win, next round's attempt indexes start from 'currentRoundFinalAttempt + 16'
     -15 (lowest possible value) is 'spy victory'.
     35 (highest possible value) is 'resistance victory'.
+
+    Anyway, I've done this for use as a heuristic gamestate value estimate, for use when there isn't
+    enough data for use by a monte carlo tree search algorithm or anything like that.
 
     Resistance wants to get to the highest possible index.
     Spies want to get to the smallest possible index.
@@ -391,6 +393,14 @@ class GamestateTree(object):
         return the_indexes
 
     @classmethod
+    def get_all_non_terminal_gamestates_indices(cls) -> List[int]:
+        """
+        List of all the gamestate indices, not including the win state indices
+        :return: list of gamestate indices
+        """
+        return [*cls._node_dict.keys()]
+
+    @classmethod
     def get_hammer_indices(cls) -> List[int]:
         """
         Indices for the final nomination attempts
@@ -412,7 +422,7 @@ class GamestateTree(object):
             return 3
 
     @classmethod
-    def get_raw_regret_from_index(cls, ind: int) -> Tuple[int, int, int]:
+    def get_raw_regret_from_index(cls, ind: int) -> Dict[str, int]:
         """
         Works out 'raw' counterfactual regret for the actions that could follow from this gamestate.
         I'm referring it it as 'raw', because it's just the regret associated with each outcome
@@ -420,17 +430,17 @@ class GamestateTree(object):
         calculating the actual probabilities of each outcome happening (which these values can simply be multiplied
         by later on)
         :param ind: index of the parent node that we're trying to work out the immediate counterfactual regret of
-        :return: tuple with (reject regret, success regret, sabotage regret)
+        :return: dict with "reject", "pass", and "fail" regret values.
         """
 
         if ind == cls._spy_win_index or ind == cls._res_win_index:
-            return 0, 0, 0  # not much left to regret if the game is already over.
+            return {"reject": 0, "pass": 0, "fail": 0}  # not much left to regret if the game is already over.
 
         this_state_node: "GamestateTree.GamestateTreeNode" = cls._node_dict[ind]
 
-        return (this_state_node.voteFailedChild - ind,
-                this_state_node.missionPassedChild - ind,
-                this_state_node.missionFailedChild - ind)
+        return {"reject": this_state_node.voteFailedChild - ind,
+                "pass": this_state_node.missionPassedChild - ind,
+                "fail": this_state_node.missionFailedChild - ind}
 
 
 # a little bit of cleanup on the gamestatetree, removing a couple of unwanted static variables that hung around
@@ -441,6 +451,75 @@ try:
     delattr(GamestateTree, "step")
 except Exception:
     pass
+
+
+class MCTSTree(object):
+    """
+    A monte carlo search tree, that uses the basic tree structure of the above gamestatetree stuff,
+    and is intended to work out the likelihood of each outcome from each state in that tree
+    """
+
+    class MCTSNode(object):
+        """A node in this MCTS tree"""
+
+        def __init__(self, state_index: int):
+            self._index: int = state_index
+            self._res_wins_from_node: int = 0
+            self._sims_from_node: int = 0
+
+        @property
+        def n_index(self) -> int:
+            """The gamestatetree index of this node"""
+            return self._index
+
+        @property
+        def n_outcomes(self) -> Dict[str, int]:
+            """Returns the indices of the nodes that could be the outcomes for this node
+            :return: dict with "reject", "pass", and "fail" node indices"""
+            gs_node: GamestateTree.GamestateTreeNode = GamestateTree.get_gstnode_from_index(self._index)
+            return {"reject": gs_node.voteFailedChild,
+                    "pass": gs_node.missionPassedChild,
+                    "fail": gs_node.missionFailedChild}
+
+        @property
+        def res_wins(self) -> int:
+            """How many times the resistance won from this node"""
+            return self._res_wins_from_node
+
+        @property
+        def spy_wins(self) -> int:
+            """How many times the spies won from this node"""
+            return self._sims_from_node - self._res_wins_from_node
+
+        @property
+        def sims(self) -> int:
+            """How many times simulations have been run with this node"""
+            return self._sims_from_node
+
+        def ran_simulation(self, resistance_win: bool) -> None:
+            """
+            Call this to update the node with new simulation info after reaching the end of a simulation
+            :param resistance_win: whether or not the resistance won
+            :return: true if they won, false otherwise.
+            """
+            self._sims_from_node += 1
+            if resistance_win:
+                self._res_wins_from_node += 1
+
+
+
+    def __init__(self):
+        """Attempts to initialize the MCTS tree"""
+
+        self._mcts_tree: Dict[int, "MCTSTree.MCTSNode"] = {}
+        """Dictionary of MCTS nodes"""
+
+        for i in GamestateTree.get_all_non_terminal_gamestates_indices():
+            self._mcts_tree[i] = MCTSTree.MCTSNode(i)
+
+
+
+
 
 
 class PlayerRecord(object):
@@ -962,6 +1041,7 @@ class rl18730(Bot):
 
         # index_sabotage_tuple: Tuple[int, int] = (self.current_gamestate, this_round_record.sabotages)
 
+        # TODO: replace the this_round_record stuff with data taken from the temp record (for now)
         for p in self.game.players:
             self.player_records[p].post_round_update(
                 self.current_gamestate,
@@ -972,19 +1052,31 @@ class rl18730(Bot):
                 p in this_round_record.voted_for_team
             )
 
-        self.team_records[self.current_gamestate] = this_round_record
-
         heuristic_suspicions: Dict[TPlayer, float] = self.heuristic_suspicion_dict
 
         the_others: List[TPlayer] = self.others()
 
         for rp in [*self.suspicion_for_each_role_combo.keys()]:
             self.suspicion_for_each_role_combo[rp] = \
-                (heuristic_suspicions[the_others[rp[0]]] + heuristic_suspicions[the_others[rp[1]]])/2
+                (heuristic_suspicions[the_others[rp[0]]] + heuristic_suspicions[the_others[rp[1]]]) / 2
 
         print("CHANCES OF EACH TEAM BEING SPIES: ")
         for rp in [*self.suspicion_for_each_role_combo.keys()]:
             print("{}: {}".format(rp, self.suspicion_for_each_role_combo[rp]))
+
+        # TODO: put heuristic suspicions for players into the team_record thingy
+        this_round_record: TeamRecord = self.temp_team_record.generate_teamrecord_from_data()
+
+        # TODO: team record in the form
+        #       * leader sus level
+        #       * team sus levels
+        #       * player sus levels
+        #       * outcome (sabotages)
+        #      so I can put that into some per-gamestate neural networks(?)
+
+        self.team_records[self.current_gamestate] = this_round_record
+
+
 
 
         pass
