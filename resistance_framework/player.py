@@ -38,6 +38,9 @@ class Player(object):
     def __eq__(self, other):
         return self.index == other.index and self.name == other.name
 
+    def __le__(self, other):
+        return self.index < other.index
+
     def __ne__(self, other):
         return self.index != other.index or self.name != other.name
 
