@@ -17,11 +17,75 @@ T = TypeVar("T")
 # at least there are type annotations :^)
 
 
+"""
+Scrap that current stuff, taking another look at the DeepRole paper.
+
+public game tree is a history of third-person observations, o ∈ O(h), instead of just actions.
+    public actions
+        * nominations?
+        * sabotages?
+        * votes?
+    observable consequences of actions
+        * how did the vote affect the outcome?
+        * overall win/loss?
+        
+we maintain a human-interpretable joint posterior belief b(ρ|h) over the initial assignment of roles ρ.
+ρ represents a full assignment of roles to players (the result of the initial
+chance action) – so our belief b(ρ|h) represents the joint probability that each player has the role
+specified in ρ, given the observed actions in the public game tree.
+
+    h given p
+    
+    p(p|h) = p(p1 ^ p2 ^ p3 ^ p4 ^ p5|h)
+    
+    p(h|p) = 1
+    
+    p(p|h) = p(h|p) * p(p)/p(h)
+    
+    
+note: would need to zero the probability of any outcome logically inconsistent with the game tree.
+
+
+
+neural network:
+    (proposer, public belief values for this gamestate)
+    -> 2 dense layers (15(?))
+    -> win layer (10)
+        win(role(p))
+            Probability of a resistance win for each role assignment at this gamestate(?)
+    -> probability-weighted values for each info set
+        5 * 2 ([isRes, isSpy] for each player)
+
+
+
+While it’s possible to estimate these values using a generic feed-
+forward architecture, it may cause lower sample efficiency, require longer training time, or fail
+to achieve a low loss. We design an interpretable custom neural network architecture that takes
+advantage of restrictions imposed by the structure of many hidden role games. Our network feeds
+a one-hot encoded vector of the proposer player i and the belief vector b into two fully-connected
+hidden layers of 80 ReLU units. These feed into a fully-connected win probability layer with sigmoid
+activation. This layer is designed to take into account the specific structure of V , respecting the binary
+nature of payoffs in Avalon (players can only win or lose). It explicitly represents the probability of a
+Resistance win (~w = P(win|ρ)) for each assignment ρ
+
+
+
+
+
+
+
+
+"""
+
+
+
+
+
 class RoleAllocationEnum(Enum):
     """An enumeration for each possible permutation of role allocations.
-    Values are worked out via bitmasks, big-endian, for a 5-bit array.
+    Values are worked out via boolean values (true = spy, false = not spy)
 
-    For example, AC = [1,0,1,0,0] = 1 + 4 -> refers to items at indexes 0 and 3."""
+    For example, AC = [True, False, True, False, False] = 1 + 4 -> refers to items at indexes 0 and 3."""
     AB: Tuple[bool, bool, bool, bool, bool] = (True, True, False, False, False)
     AC: Tuple[bool, bool, bool, bool, bool] = (True, False, True, False, False)
     AD: Tuple[bool, bool, bool, bool, bool] = (True, False, False, True, False)
@@ -41,6 +105,10 @@ class RoleAllocationEnum(Enum):
         :return: A list consisting of the two objects from the input list that this RoleAllocationEnum is referring to.
         """
         return [input_list[p] for p in range(0, len(input_list)) if self.value[p]]
+
+    def get_value(self) -> Tuple[bool, bool, bool, bool, bool]:
+        return self.value
+
 
 
 class TeamRecord(object):
@@ -137,6 +205,27 @@ class TeamRecord(object):
         """What were the predicted probabilities of each player on the team being a spy?"""
         return self._latter_predicted_spy_probabilities.copy()
 
+    @property
+    def public_belief_states(self) -> Dict[RoleAllocationEnum, float]:
+        """Public belief states(?) for this gamestate."""
+
+        player_kv: List[TPlayer, float] = [*self._prior_predicted_spy_probabilities.items()]
+
+        public_state_dict: Dict[RoleAllocationEnum, float] = {}
+
+        for rp in RoleAllocationEnum.__members__.values():
+            chance_of_this_allocation: float = 1
+            rp_list = rp.get_value()
+            for r in range(0, len(rp_list)):
+                if rp_list[r]:
+                    chance_of_this_allocation *= player_kv[r][1]
+                else:
+                    chance_of_this_allocation *= (1 - player_kv[r][1])
+            public_state_dict[rp] = chance_of_this_allocation
+
+        return public_state_dict
+
+
     def __str__(self):
         """Formats this as a string, shamelessly lifted from the game.State class"""
         output: str = "<TeamRecord\n"
@@ -144,6 +233,7 @@ class TeamRecord(object):
             value = self.__dict__[key]
             output += "\t- %s: %r\n" % (key, value)
         output += "\t- %s: %r\n" % ("loggable_dict", self.loggable_dict)
+        output += "\t- %s: %r\n" % ("public_belief_dict", self.public_belief_states)
         return output + ">"
 
     @property
@@ -1355,8 +1445,8 @@ class rl18730(Bot):
             #print(self.player_records[p].simple_spy_probability())
             #print(p in spies)
 
-        #for k in [*self.team_records.keys()]:
-        #    print("{:3d} {}".format(k, self.team_records[k]))
+        for k in [*self.team_records.keys()]:
+            print("{:3d} {}".format(k, self.team_records[k]))
 
         log_dict: Dict[str, Union[
             Dict[int, Dict[str, Union[float, Tuple[int, float], Dict[int, float], int]]],
