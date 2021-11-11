@@ -114,6 +114,7 @@ class RoleAllocationEnum(Enum):
         Turns the value of this into a string for usage in json.dumps() stuff
         :return: a string ab, where a is index of first true, and b is index of second true
         """
+        # TODO: maybe replace it with a string version of a 1-hot encoded vector? ie 11000 instead of '01' for AB?
         first_index: int = self.value.index(True)
         return "{}{}".format(first_index, self.value[first_index+1:].index(True) + first_index + 1)
 
@@ -126,6 +127,7 @@ class RoleAllocationEnum(Enum):
         :param jsoned_string: the sort of string that to_string_for_json would expect to be given
         :return: the RoleAllocationEnum which that string describes.
         """
+        # TODO same change as described in the TODO for the above to_json_string method.
         if len(jsoned_string) != 2:
             raise ValueError("You've given an invalid string, expected something like '01', got {}"
                              .format(jsoned_string)
@@ -232,7 +234,7 @@ class TeamRecord(object):
 
     @property
     def public_belief_states(self) -> Dict[RoleAllocationEnum, float]:
-        """Public belief states(?) for this gamestate."""
+        """Public belief states(?) for this gamestate (before the outcome of this mission attempt)."""
 
         player_kv: List[TPlayer, float] = [*self._prior_predicted_spy_probabilities.items()]
 
@@ -277,7 +279,14 @@ class TeamRecord(object):
 
         return jpbs
 
-
+    @property
+    def json_dumpable_individual_beliefs(self) -> tuple[float, float, float, float, float]:
+        """
+        gets prior_predicted_spy_probabilities, but in a tuple of floats (based on player index)
+        :return: (p0 spy chance, p1 spy chance, p2 spy chance, p3 spy chance, p4 spy chance)
+        """
+        # noinspection PyTypeChecker
+        return tuple([p for p in [*self._prior_predicted_spy_probabilities.values()]])
 
     def __str__(self):
         """Formats this as a string, shamelessly lifted from the game.State class"""
@@ -293,58 +302,70 @@ class TeamRecord(object):
         return output + ">"
 
     @property
-    def loggable_dict(self) -> Dict[str, Union[float, Tuple[int, float], Dict[int, float], int]]:
+    def loggable_dict(self) -> Dict[
+        str,
+        Union[
+            Tuple[int, int, int, int, int],
+            Dict[str, float],
+            Tuple[float, float, float, float, float],
+            int
+        ]
+    ]:
         """
         Attempts to turn this into a dict that can be logged
         :return: a dictionary with the following values:
-        * p0
-            * prior suspicion for player 0
-        * p1
-            * prior suspicion for player 1
-        * p2
-            * prior suspicion for player 2
-        * p3
-            * prior suspicion for player 3
-        * p4
-            * prior suspicion for player 4
         * leader
             * tuple of (leader index, leader suspicion)
-            * a tuple of 4 0s and one 1 (with the 1 being in leader[self.leader.index])
+            * one-hot encoded tuple of 4 0s and one 1 (with the 1 being in leader[self.leader.index])
         * beliefs
             * a dict of
                 * RoleAllocationEnum.to_string_for_json()
                 * float chance of each RoleAllocationEnum describing which team are spies
                     * normalized so the sum of all chances = 1
         * team
-            * dictionary of {team member index: team member suspicion}
+            * one-hot encoded tuple, indicating which members were on the team (1 = member with that index on team)
         * sabotaged
             * how many times the mission was sabotaged (0 if success, -1 if nomination failed)
+
         """
-        info_dict: Dict[str, Union[float, Tuple[int, float], Dict[int, float], int]] = {}
+        #info_dict: Dict[str, Union[float, Tuple[int, float], Dict[int, float], int]] = {}
 
-        prior_probs: List[float] = [*self._prior_predicted_spy_probabilities.values()]
+        #prior_probs: List[float] = [*self._prior_predicted_spy_probabilities.values()]
 
-        for i in range(0, len(prior_probs)):
-            info_dict["p{}".format(i)] = prior_probs[i]
+        #for i in range(0, len(prior_probs)):
+        #    info_dict["p{}".format(i)] = prior_probs[i]
 
-        default_leader_array = [0, 0, 0, 0, 0]
+        info_dict: Dict[str, Union[
+            Tuple[int, int, int, int, int],
+            Dict[str, float],
+            Tuple[float, float, float, float, float],
+            int]
+        ] = {}
+
+        default_leader_array: List[int, int, int, int, int] = [0, 0, 0, 0, 0]
         default_leader_array[self.leader.index] = 1
 
-        # TODO: uncomment below line.
-        #  info_dict["leader"] = tuple(default_leader_array)
+        # noinspection PyTypeChecker
+        info_dict["leader"] = tuple(default_leader_array)
 
-        info_dict["leader"] = (self.leader.index, self._prior_predicted_spy_probabilities[self.leader])
+        #info_dict["leader"] = (self.leader.index, self._prior_predicted_spy_probabilities[self.leader])
 
-        # TODO: uncomment the below line
-        #  info_dict["beliefs"] = self.json_dumpable_public_belief_states
+        info_dict["beliefs"] = self.json_dumpable_public_belief_states
 
-        info_dict["team"]: Dict[int, float] = {}
-
+        default_team_array: List[int, int, int, int, int] = [0, 0, 0, 0, 0]
         for p in self.team:
-            info_dict["team"][p.index] = info_dict["p{}".format(p.index)]
+            default_team_array[p.index] = 1
+
+        # noinspection PyTypeChecker
+        info_dict["team"] = tuple(default_team_array)
+
+        #for p in self.team:
+        #    info_dict["team"][p.index] = info_dict["p{}".format(p.index)]
         #{p: self._prior_predicted_spy_probabilities[p] for p in self.team}
 
         info_dict["sabotaged"] = self._sabotages
+
+        info_dict["players"] = self.json_dumpable_individual_beliefs
 
         return info_dict
 
@@ -1525,23 +1546,34 @@ class rl18730(Bot):
         :param spies:        List of only the spies in the game.
         """
 
-        known: List[bool] = []
+        known: List[int] = []
 
         for p in self.game.players:
             was_spy: bool = p in spies
             self.player_records[p].identity_is_known(was_spy)
-            known.append(was_spy)
-            #print(self.player_records[p].simple_spy_probability())
-            #print(p in spies)
+            known.append(1 if was_spy else 0)
+            # print(self.player_records[p].simple_spy_probability())
+            # print(p in spies)
 
         for k in [*self.team_records.keys()]:
             print("{:3d} {}".format(k, self.team_records[k]))
 
-        log_dict: Dict[str, Union[
-            Dict[int, Dict[str, Union[float, Tuple[int, float], Dict[int, float], int]]],
-            bool,
-            Tuple[bool, bool, bool, bool, bool]
-        ]] = {
+        log_dict: Dict[
+            str,
+            Union[
+                Dict[
+                    str,
+                    Union[
+                        Tuple[int, int, int, int, int],
+                        Dict[str, float],
+                        Tuple[float, float, float, float, float],
+                        int
+                    ]
+                ],
+                bool,
+                Tuple[int, int, int, int, int]
+            ]
+        ] = {
             "teams": {},
             "res_win": win,
             "spies": tuple(known)
@@ -1551,6 +1583,7 @@ class rl18730(Bot):
             log_dict["teams"][k] = self.team_records[k].loggable_dict
 
         self.log.debug(json.dumps(log_dict))
+        print(json.dumps(log_dict))
 
         pass
 
