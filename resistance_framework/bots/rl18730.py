@@ -109,6 +109,31 @@ class RoleAllocationEnum(Enum):
     def get_value(self) -> Tuple[bool, bool, bool, bool, bool]:
         return self.value
 
+    def to_string_for_json(self) -> str:
+        """
+        Turns the value of this into a string for usage in json.dumps() stuff
+        :return: a string ab, where a is index of first true, and b is index of second true
+        """
+        first_index: int = self.value.index(True)
+        return "{}{}".format(first_index, self.value[first_index+1:].index(True) + first_index + 1)
+
+    def from_jsoned_string(self, jsoned_string: str) -> "RoleAllocationEnum":
+        """
+        from a string ab (a = index of first true, b is index of second true),
+        as would have been returned by to_string_for_json, and then returns the
+        RoleAllocationEnum with the value that the string ab describes.
+        Throws an exception if an unexpected input is given.
+        :param jsoned_string: the sort of string that to_string_for_json would expect to be given
+        :return: the RoleAllocationEnum which that string describes.
+        """
+        if len(jsoned_string) != 2:
+            raise ValueError("You've given an invalid string, expected something like '01', got {}"
+                             .format(jsoned_string)
+                             )
+        default_arr: List[bool, bool, bool, bool, bool] = [False, False, False, False, False]
+        default_arr[int(jsoned_string[0])] = True
+        default_arr[int(jsoned_string[1])] = True
+        return RoleAllocationEnum(tuple(default_arr))
 
 
 class TeamRecord(object):
@@ -223,7 +248,35 @@ class TeamRecord(object):
                     chance_of_this_allocation *= (1 - player_kv[r][1])
             public_state_dict[rp] = chance_of_this_allocation
 
+        total_chances: float = sum([*public_state_dict.values()])
+
+        if total_chances == 0:
+            total_chances = 1
+
+        for k in [*public_state_dict.keys()]:
+            public_state_dict[k] /= total_chances  # sum of hypotheses = 1 (hopefully)
+
         return public_state_dict
+
+    @property
+    def json_dumpable_public_belief_states(self) -> Dict[str, float]:
+        """
+        Wrapper for self.public_belief_states that returns it in a format that's more json-friendly.
+        Why?
+        Attempting a json.dumps on the public_belief_states causes a
+        'TypeError: keys must be str, int, float, bool or None, not RoleAllocationEnum' error message.
+        So I'm converting the keys to str instead.
+        :return: dict with keys ["ab"] where a = index of spy 1, b = index of spy 2.
+        """
+        pbs: Dict[RoleAllocationEnum, float] = self.public_belief_states
+
+        jpbs: Dict[str, float] = {}
+
+        for kv in [*pbs.items()]:
+            jpbs[kv[0].to_string_for_json()] = kv[1]
+
+        return jpbs
+
 
 
     def __str__(self):
@@ -233,7 +286,10 @@ class TeamRecord(object):
             value = self.__dict__[key]
             output += "\t- %s: %r\n" % (key, value)
         output += "\t- %s: %r\n" % ("loggable_dict", self.loggable_dict)
-        output += "\t- %s: %r\n" % ("public_belief_dict", self.public_belief_states)
+        pbs: Dict[RoleAllocationEnum, float] = self.public_belief_states
+        output += "\t- %s: %r\n" % ("public_belief_dict", pbs)
+        output += "\t- %s: %r\n" % ("most_sus_pair", max([*pbs.items()], key=lambda kv: kv[1]))
+        output += "\t- %s: %r\n" % ("public_belief_dict_json", self.json_dumpable_public_belief_states)
         return output + ">"
 
     @property
@@ -253,6 +309,12 @@ class TeamRecord(object):
             * prior suspicion for player 4
         * leader
             * tuple of (leader index, leader suspicion)
+            * a tuple of 4 0s and one 1 (with the 1 being in leader[self.leader.index])
+        * beliefs
+            * a dict of
+                * RoleAllocationEnum.to_string_for_json()
+                * float chance of each RoleAllocationEnum describing which team are spies
+                    * normalized so the sum of all chances = 1
         * team
             * dictionary of {team member index: team member suspicion}
         * sabotaged
@@ -265,9 +327,19 @@ class TeamRecord(object):
         for i in range(0, len(prior_probs)):
             info_dict["p{}".format(i)] = prior_probs[i]
 
+        default_leader_array = [0, 0, 0, 0, 0]
+        default_leader_array[self.leader.index] = 1
+
+        # TODO: uncomment below line.
+        #  info_dict["leader"] = tuple(default_leader_array)
+
         info_dict["leader"] = (self.leader.index, self._prior_predicted_spy_probabilities[self.leader])
 
+        # TODO: uncomment the below line
+        #  info_dict["beliefs"] = self.json_dumpable_public_belief_states
+
         info_dict["team"]: Dict[int, float] = {}
+
         for p in self.team:
             info_dict["team"][p.index] = info_dict["p{}".format(p.index)]
         #{p: self._prior_predicted_spy_probabilities[p] for p in self.team}
@@ -369,8 +441,6 @@ class TempTeamRecord(object):
     def voted_for_team(self) -> FrozenSet:
         """who voted for the team?"""
         return self._voted_for_team
-
-
 
 
 class GamestateTree(object):
@@ -1044,25 +1114,20 @@ class PlayerRecord(object):
 
         lead_sus: List[float] = [m[1] for m in self.mission_teams_lead_sus_levels if m[0] in all_prior_rounds]
         been_on_sus: List[float] = [m[1] for m in self.mission_teams_been_on_sus_levels if m[0] in all_prior_rounds]
-        #print("\nlead, been")
-        #print(lead_sus)
-        #print(been_on_sus)
-
 
         has_lead_missions: bool = len(lead_sus) > 0
         has_been_on_missions: bool = len(been_on_sus) > 0
 
-        #voted_for_sus: List[float] = [m[1] for m in self.approved_teams_sus_levels if m[0] in all_prior_rounds]
-        #voted_against_sus: List[float] = [m[1] for m in self.rejected_teams_sus_levels if m[0] in all_prior_rounds]
+        # voted_for_sus: List[float] = [m[1] for m in self.approved_teams_sus_levels if m[0] in all_prior_rounds]
+        # voted_against_sus: List[float] = [m[1] for m in self.rejected_teams_sus_levels if m[0] in all_prior_rounds]
 
-        #total_concluded_missions_voted_on: int = len(voted_for_sus) + len(voted_against_sus)
-
+        # total_concluded_missions_voted_on: int = len(voted_for_sus) + len(voted_against_sus)
 
         if has_lead_missions or has_been_on_missions:
             lead_len = len(lead_sus)
             been_len = len(been_on_sus)
-            return min((sum(lead_sus)) + (sum(been_on_sus)) / (lead_len + been_len), 1)
-            #return (sum(lead_sus) * max(1,lead_len)) + (sum(been_on_sus) * max(1, been_len)) / (lead_len + been_len) * (max(1, lead_len) * max(1, been_len))
+            return min((sum(lead_sus)/4) + (sum(been_on_sus)) / (lead_len/4 + been_len), 1)
+            #  return (sum(lead_sus) * max(1,lead_len)) + (sum(been_on_sus) * max(1, been_len)) / (lead_len + been_len) * (max(1, lead_len) * max(1, been_len))
         else:
             return 0.25
         #elif total_concluded_missions_voted_on > 0:
@@ -1176,10 +1241,14 @@ class rl18730(Bot):
         self.role_combos_that_im_in = tuple(
             [t for t in RoleAllocationEnum.__members__.values() if self in t.extract_sublist_from(players)]
         )
+
         self.the_other_role_combos = tuple(
             [t for t in RoleAllocationEnum.__members__.values() if t not in self.role_combos_that_im_in]
         )
-        self.suspicion_for_each_role_combo = dict.fromkeys(RoleAllocationEnum.__members__.values(), 0.1)
+
+        self.suspicion_for_each_role_combo = dict.fromkeys(RoleAllocationEnum.__members__.values(), 1/6)
+        for r in self.role_combos_that_im_in:
+            self.suspicion_for_each_role_combo[r] = 0
 
         self.leader_order.clear()
         self.leader_order = players.copy()
@@ -1348,13 +1417,33 @@ class rl18730(Bot):
 
         self.temp_team_record.add_current_spy_probabilities(heuristic_suspicions)
 
+        heuristic_suspicions[self] = 0  # Why would I suspect myself of being a spy???
+
         the_players: List[TPlayer] = self.game.players
 
+
+
         for rp in [*self.suspicion_for_each_role_combo.keys()]:
-            those_players: List[TPlayer] = rp.extract_sublist_from(the_players)
-            self.suspicion_for_each_role_combo[rp] = \
-                sum(heuristic_suspicions[p] for p in those_players)/2
-            # (heuristic_suspicions[those_players[0]] + heuristic_suspicions[the_players[rp[1]]]) / 2
+            # those_players: List[TPlayer] = rp.extract_sublist_from(the_players)
+            sus_level: float = 1
+            rp_list: Tuple[bool, bool, bool, bool, bool] = rp.get_value()
+            if rp_list in self.role_combos_that_im_in:
+                self.suspicion_for_each_role_combo[rp] = 0  # I'm not a spy, why would I suspect myself???
+                continue
+            for r in range(len(rp_list)):
+                if rp_list[r]:
+                    sus_level *= heuristic_suspicions[the_players[r]]
+                else:
+                    sus_level *= (1 - heuristic_suspicions[the_players[r]])
+            self.suspicion_for_each_role_combo[rp] = sus_level
+
+        # no need to bother normalizing the heuristic suspicions for our internal use
+
+
+
+        #self.suspicion_for_each_role_combo[rp] = \
+        #    sum(heuristic_suspicions[p] for p in those_players)/2
+        # (heuristic_suspicions[those_players[0]] + heuristic_suspicions[the_players[rp[1]]]) / 2
 
         #print("CHANCES OF EACH TEAM BEING SPIES: ")
         #for rp in [*self.suspicion_for_each_role_combo.keys()]:
