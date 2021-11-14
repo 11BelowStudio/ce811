@@ -2,7 +2,7 @@
 from player import Bot, TPlayer
 from typing import List
 
-g_spies: List[TPlayer]
+g_spies: Set[TPlayer]
 
 class DumbBot(Bot):
 
@@ -15,7 +15,7 @@ class DumbBot(Bot):
         return True
     def sabotage(self) -> bool:
         return True
-    def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
+    def onGameRevealed(self, players: List[TPlayer], spies: Set[TPlayer]) -> None:
         if len(spies) > 0:
             global g_spies
             g_spies = spies
@@ -32,7 +32,7 @@ class DumbBot2(Bot):
         return True
     def sabotage(self) -> bool:
         return True
-    def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
+    def onGameRevealed(self, players: List[TPlayer], spies: Set[TPlayer]) -> None:
         if len(spies) > 0:
             global g_spies
             g_spies = spies
@@ -49,7 +49,7 @@ class DumbBot3(Bot):
         return True
     def sabotage(self) -> bool:
         return True
-    def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
+    def onGameRevealed(self, players: List[TPlayer], spies: Set[TPlayer]) -> None:
         if len(spies) > 0:
             global g_spies
             g_spies = spies
@@ -66,7 +66,7 @@ class DumbBot4(Bot):
         return True
     def sabotage(self) -> bool:
         return True
-    def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
+    def onGameRevealed(self, players: List[TPlayer], spies: Set[TPlayer]) -> None:
         if len(spies) > 0:
             global g_spies
             g_spies = spies

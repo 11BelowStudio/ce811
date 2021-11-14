@@ -1,6 +1,6 @@
 import tensorflow.python.framework.ops
 
-from player import Bot, TPlayer
+from player import Bot, TPlayer, Player
 from game import State
 import random
 
@@ -15,7 +15,7 @@ model: keras.Model = keras.models.load_model('bots/lab3/loggerbot_classifier')
 import numpy as np
 import sys
 
-from loggerbot import LoggerBot # this assumes our loggerbot was in a file called loggerbot.py
+from loggerbot import LoggerBot  # this assumes our loggerbot was in a file called loggerbot.py
 
 class NeuralBot(LoggerBot):
 
@@ -156,18 +156,18 @@ class NeuralBot(LoggerBot):
                     break
             return False
 
-    def announce(self) -> Dict[TPlayer, float]:
+    def announce(self) -> Dict[Player, float]:
         """Publicly state beliefs about the game's state by announcing spy
         probabilities for any combination of players in the game.  This is
         done after each mission completes, and takes the form of a mapping from
         player to float.  Not all players must be specified, and of course this
         can be innacurate!
 
-        :return: Dict[TPlayer, float]     Mapping of player to spy probability.
+        :return: Dict[Player, float]     Mapping of player to spy probability.
         """
-        spy_or_not_spy: Dict[TPlayer, np.float32] = \
+        spy_or_not_spy: Dict[Player, np.float32] = \
             self.calc_player_probabilities_of_being_spy()
-        spy_chances: Dict[TPlayer, float] = {}
+        spy_chances: Dict[Player, float] = {}
         for p in spy_or_not_spy.keys():
             spy_chances[p] = float(spy_or_not_spy[p])
         return spy_chances
@@ -181,7 +181,7 @@ class NeuralBot(LoggerBot):
     # This function used to output log data to the log file. 
     # We don't need to log any data any more so let's override that function
     # and make it do nothing...
-    def onGameComplete(self, win: bool, spies: List[TPlayer]) -> None:
+    def onGameComplete(self, win: bool, spies: Set[TPlayer]) -> None:
         pass
 
 

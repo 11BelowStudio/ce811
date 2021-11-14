@@ -3,7 +3,7 @@ import logging.handlers
 
 import core
 
-from typing import TypeVar, List, Dict
+from typing import TypeVar, List, Dict, Set
 
 TPlayer = TypeVar("TPlayer", bound="Player")
 """Anything that's a subtype of the 'Player' class"""
@@ -75,11 +75,11 @@ class Bot(Player):
 
     __metaclass__ = core.Observable
 
-    def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
+    def onGameRevealed(self, players: List[TPlayer], spies: Set[TPlayer]) -> None:
         """This function will be called to list all the players, and if you're
         a spy, the spies too -- including others and yourself.
         :param players:  List of all players in the game including you.
-        :param spies:    List of players that are spies (if you are a spy), or an empty list (if you aren't a spy).
+        :param spies:    Set of players that are spies (if you are a spy), or an empty set (if you aren't a spy).
         """
         pass
 
@@ -141,18 +141,18 @@ class Bot(Player):
         """
         pass
 
-    def announce(self) -> Dict[TPlayer, float]:
+    def announce(self) -> Dict[Player, float]:
         """Publicly state beliefs about the game's state by announcing spy
         probabilities for any combination of players in the game.  This is
         done after each mission completes, and takes the form of a mapping from
         player to float.  Not all players must be specified, and of course this
         can be innacurate!
 
-        :return: Dict[TPlayer, float]     Mapping of player to spy probability.
+        :return: Dict[Player, float]     Mapping of player to spy probability.
         """
         return {}
 
-    def onAnnouncement(self, source: TPlayer, announcement: Dict[TPlayer, float]) -> None:
+    def onAnnouncement(self, source: Player, announcement: Dict[Player, float]) -> None:
         """Callback if another player decides to announce beliefs about the
         game.  This is passed as a potentially incomplete mapping from player
         to spy probability.
@@ -179,7 +179,7 @@ class Bot(Player):
         """
         pass
 
-    def onGameComplete(self, win: bool, spies: List[TPlayer]) -> None:
+    def onGameComplete(self, win: bool, spies: Set[TPlayer]) -> None:
         """Callback once the game is complete, and everything is revealed.
         :param win:          Boolean true if the Resistance won.
         :param spies:        List of only the spies in the game.

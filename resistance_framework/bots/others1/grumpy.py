@@ -67,7 +67,7 @@ class GrumpyBot(Bot):
         @param index    Your own index in the player list.
         @param spy      Are you supposed to play as a spy?
         """
-        Player.__init__(self, self.__class__.__name__, index)
+        super().__init__(game, index, spy)
         self.game = game
         self.spy = spy
 
@@ -106,7 +106,7 @@ class GrumpyBot(Bot):
         
         if len(candidates) == 0:
             #print "random plan chosen"
-            return random.choice(plans);
+            return random.choice(plans)
         else:
             #print "appropriate plan chosen"
             return random.choice(candidates)
@@ -196,7 +196,7 @@ class GrumpyBot(Bot):
         #action = random.choice([True, False])
         action = self.plan.getSabotageAction(self.game.turn, self.game.tries)
         self.log.info("<sabotage missionId=\"%d\" attemptId=\"%d\">%s</sabotage>" %(self.game.turn, self.game.tries, action))
-        return False 
+        return action
 
     def onGameComplete(self, win, spies):
         """Callback once the game is complete, and everything is revealed.

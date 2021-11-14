@@ -2,7 +2,7 @@
 # how this is implemented by looking at player.py.  The API is very well
 # documented there.
 import game
-from player import Bot, TPlayer # TPlayer is a type annotation for any subtype of the 'Player' class.
+from player import Bot, TPlayer, Player  # TPlayer is a type annotation for any subtype of the 'Player' class.
 
 # Each bot has access to the game state, stored in the self.game member
 # variable.  See the State class in game.py for the full list of variables you
@@ -19,7 +19,7 @@ from game import State
 # altogether!
 import random
 
-from typing import List, Dict, Set # 3.8 compatibility
+from typing import List, Dict, Set  # 3.8 compatibility
 
 
 class Paranoid(Bot):
@@ -63,7 +63,7 @@ class CountingBot(Bot):
         self.failed_missions_been_on: Dict[TPlayer, int] = {}
         """ A dictionary that keeps count of how many times each player has been on a team that failed."""
 
-    def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
+    def onGameRevealed(self, players: List[TPlayer], spies: Set[TPlayer]) -> None:
         """
         At the start of each new game, we clear the list of failed missions that each player has been on,
         and repopulate it with each player's failed mission count reset to 0
@@ -154,13 +154,13 @@ class CountingBot(Bot):
         self.log.debug("I always sabotage when I'm a spy when it isn't turn 1 and there's more than 2 people here")
         return True
 
-    def announce(self) -> Dict[TPlayer, float]:
+    def announce(self) -> Dict[Player, float]:
         """
         Announces suspicions via the failed_missions_been_on dict
         :return: the self.failed_missions_been_on dict
         # TODO: maybe return that dict in a more appropriate form? documentation didn't specify a standard for this dict
         """
-        sus_dict: Dict[TPlayer, float] = {}
+        sus_dict: Dict[Player, float] = {}
         for k in [*self.failed_missions_been_on.keys()]:
             if k == self:  # no comment about itself.
                 continue

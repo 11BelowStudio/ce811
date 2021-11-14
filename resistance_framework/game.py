@@ -2,7 +2,7 @@ import itertools
 
 import player
 from player import Player, TPlayer
-from typing import List, Set, Dict # 3.8 compatibility
+from typing import List, Set, Dict  # 3.8 compatibility
 
 
 class State(object):
@@ -77,7 +77,7 @@ class BaseGame(object):
     NUM_WINS: int = 3
     NUM_LOSSES: int = 3
 
-    def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]):
+    def onGameRevealed(self, players: List[TPlayer], spies: Set[TPlayer]):
         pass
 
     def onMissionAttempt(self, mission: int, tries: int, leader: TPlayer):
@@ -98,7 +98,7 @@ class BaseGame(object):
     def onAnnouncement(self, source: TPlayer, announcement: Dict[TPlayer, float]):
         pass
 
-    def onGameComplete(self, win: bool, spies: List[TPlayer]):
+    def onGameComplete(self, win: bool, spies: Set[TPlayer]):
         pass
 
     def __init__(self, state: State = None):
@@ -216,10 +216,10 @@ class BaseGame(object):
         """
         for source, ann in self.get_announcements():
             copy = {}
-            assert type(ann) is dict, "Please return a dictionary from %s.announce(), not %s." % (p.name, type(ann))
+            assert type(ann) is dict, "Please return a dictionary from %s.announce(), not %s." % (source.name, type(ann))
             for k, v in ann.items():
-                assert isinstance(k, Player), "Please use Player objects as dictionary key in %s.announce()." % (p.name)
-                assert isinstance(v, float), "Please use floats as dictionary values in %s.announce()." % (p.name)
+                assert isinstance(k, Player), "Please use Player objects as dictionary key in %s.announce()." % (source.name)
+                assert isinstance(v, float), "Please use floats as dictionary values in %s.announce()." % (source.name)
                 copy[Player(k.name, k.index)] = v
 
             self.onAnnouncement(source, copy)

@@ -179,7 +179,7 @@ class mcts_tree_learner_bot(Bot):
 
 
 
-    def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
+    def onGameRevealed(self, players: List[TPlayer], spies: Set[TPlayer]) -> None:
         """This function will be called to list all the players, and if you're
         a spy, the spies too -- including others and yourself.
         :param players:  List of all players in the game including you.
@@ -283,7 +283,7 @@ class mcts_tree_learner_bot(Bot):
         """
         pass
 
-    def onGameComplete(self, win: bool, spies: List[TPlayer]) -> None:
+    def onGameComplete(self, win: bool, spies: Set[TPlayer]) -> None:
         """Callback once the game is complete, and everything is revealed.
         :param win:          Boolean true if the Resistance won.
         :param spies:        List of only the spies in the game.

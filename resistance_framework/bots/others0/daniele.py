@@ -37,7 +37,7 @@ class IAmNotASpyPlayer(Bot):
             self.stats[p.index] += sabotaged*sabotaged;
         #print self.stats
 
-    def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
+    def onGameRevealed(self, players: List[TPlayer], spies: Set[TPlayer]) -> None:
         return self._reveal(players, spies)
             
     def _reveal(self, players, spies):
@@ -109,7 +109,7 @@ class IAmNotASpyPlayer(Bot):
     def sabotage(self) -> bool:
         return self._sabotage(self.game.team)
 
-    def _sabotage(self,team):
+    def _sabotage(self, team):
         if not self.spy:
             return False
         else: 

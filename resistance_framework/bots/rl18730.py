@@ -96,7 +96,6 @@ Resistance win (~w = P(win|ρ)) for each assignment ρ
 """
 
 
-
 class RoleAllocationEnum(Enum):
     """An enumeration for each possible permutation of role allocations.
     Values are worked out via boolean values (true = spy, false = not spy)
@@ -132,7 +131,8 @@ class RoleAllocationEnum(Enum):
         """
         return "".join(["1" if i else "0" for i in self.value])
 
-    def from_jsoned_string(self, jsoned_string: str) -> "RoleAllocationEnum":
+    @classmethod
+    def from_jsoned_string(cls, jsoned_string: str) -> "RoleAllocationEnum":
         """
         from a string ab (a = index of first true, b is index of second true),
         as would have been returned by to_string_for_json, and then returns the
@@ -495,8 +495,6 @@ class MCTSTree(object):
             if resistance_win:
                 self._res_wins_from_node += 1
 
-
-
     def __init__(self):
         """Attempts to initialize the MCTS tree"""
 
@@ -505,7 +503,6 @@ class MCTSTree(object):
 
         for i in GamestateTree.get_all_non_terminal_gamestates_indices():
             self._mcts_tree[i] = MCTSTree.MCTSNode(i)
-
 
 
 class TeamRecord(object):
@@ -552,10 +549,6 @@ class TeamRecord(object):
         self._voted_for_team: FrozenSet[TPlayer] = frozenset(voted_for_team)
         self._prior_predicted_spy_probabilities: Dict[TPlayer, float] = prior_predicted_spy_probabilities.copy()
         self._latter_predicted_spy_probabilities: Dict[TPlayer, float] = latter_predicted_spy_probabilities.copy()
-        #self._predicted_spy_probabilities: Dict[TPlayer, float] = {}
-        #for p in [*predicted_spy_probabilities.keys()]:
-        #    self._predicted_spy_probabilities[p] = predicted_spy_probabilities[p]
-
 
     @property
     def team(self) -> Tuple[TPlayer, ...]:
@@ -658,7 +651,6 @@ class TeamRecord(object):
 
         return public_state_dict
 
-
     def json_dumpable_public_belief_states(self, latter: bool = False) -> Dict[str, float]:
         """
         Wrapper for self.public_belief_states_former and also public_belief_states_latter
@@ -729,17 +721,12 @@ class TeamRecord(object):
         * team
             * one-hot encoded tuple, indicating which members were on the team (1 = member with that index on team)
         * voted
-            * one-hot encoded tuple, indicating which team members voted for the team (1 = member with that index on team)
+            * one-hot encoded tuple, indicating which team members voted for the team
+            (1 = member with that index on team)
         * sabotaged
             * how many times the mission was sabotaged (0 if success, -1 if nomination failed)
 
         """
-        #info_dict: Dict[str, Union[float, Tuple[int, float], Dict[int, float], int]] = {}
-
-        #prior_probs: List[float] = [*self._prior_predicted_spy_probabilities.values()]
-
-        #for i in range(0, len(prior_probs)):
-        #    info_dict["p{}".format(i)] = prior_probs[i]
 
         info_dict: Dict[str, Union[
             Tuple[int, int, int, int, int],
@@ -785,7 +772,6 @@ class TeamRecord(object):
         return info_dict
 
 
-
 class TempTeamRecord(object):
     """
     Like TeamRecord, but temporary.
@@ -796,6 +782,7 @@ class TempTeamRecord(object):
 
     def __init__(self):
         self.team: Tuple[TPlayer, ...] = ()
+        # noinspection PyTypeChecker
         self.leader: TPlayer = None
         self.mission_number: int = 0
         self.nomination_attempt: int = 0
@@ -825,6 +812,8 @@ class TempTeamRecord(object):
         """
         Copy team info to this object when the team is revealed
         :param team: the new team
+        :param prior_spy_probs: predictions about how likely each team is to be a spy as of right now
+        (before vote outcome)
         """
         self.team = tuple(team)
         self.prior_player_spy_probabilities = prior_spy_probs.copy()
@@ -853,10 +842,6 @@ class TempTeamRecord(object):
         :return: nothing
         """
         self.latter_player_spy_probabilities = spy_probs_dict.copy()
-        #self.player_spy_probabilities: Dict[TPlayer, float] = {}
-        #for p in [*spy_probs_dict.keys()]:
-        #    self.player_spy_probabilities[p] = spy_probs_dict[p]
-
 
     @property
     def generate_teamrecord_from_data(self) -> TeamRecord:
@@ -877,8 +862,6 @@ class TempTeamRecord(object):
     def voted_for_team(self) -> FrozenSet:
         """who voted for the team?"""
         return self._voted_for_team
-
-
 
 
 class PlayerRecord(object):
@@ -935,6 +918,7 @@ class PlayerRecord(object):
         The teams that this player voted against,identified via GameState_Tree indices.
         """
 
+        # noinspection PyTypeChecker
         self._is_spy: bool = None
         """IMPORTANT: DO NOT GIVE THIS A VALUE UNTIL KNOWN, FOR SURE, WHETHER THIS PLAYER WAS A SPY"""
 
@@ -1006,7 +990,6 @@ class PlayerRecord(object):
         """All failed missions that this player lead"""
         return [m for m in self._missions_lead if self._all_missions_and_sabotages_with_teams[m][0] > 0]
 
-
     @property
     def mission_teams_lead_sus_levels(self) -> List[Tuple[int, float]]:
         """
@@ -1061,7 +1044,8 @@ class PlayerRecord(object):
 
     @property
     def mission_teams_been_on_sus_levels(self) -> List[Tuple[int, float]]:
-        """finds all non-rejected teams been on, and returns a list of [id for that gamestate, sabotages/participants]"""
+        """finds all non-rejected teams been on,
+        and returns a list of [id for that gamestate, sabotages/participants]"""
         teams_sus: List[Tuple[int, float]] = []
         for t in self._teams_been_on:
             sabs: Tuple[int, int] = self._all_missions_and_sabotages_with_teams[t]
@@ -1189,18 +1173,58 @@ class PlayerRecord(object):
         hammer: List[int] = GamestateTree.get_hammer_indices()
         return [v for v in self._teams_rejected if v in hammer]
 
-    def simple_spy_probability(self, everything_before_round: int = -1) -> float:
+    class LookaheadInfo(object):
+        def __init__(
+                self, gs: int, team_size: int, hammer: bool, ldr: bool, on: bool, voted_for: bool, predicted_sabs: float
+        ):
+            """
+            Constructs this predicted lookahead info object
+            :param gs: id of this gamestate?
+            :param team_size: team size for this gamestate?
+            :param hammer: is this gamestate hammer?
+            :param ldr: would this player be the leader?
+            :param on: would this player have been on the team?
+            :param voted_for: would this player have voted for the team?
+            :param predicted_sabs: how many sabotages are predicted on this team?
+            """
+            self.gs: int = gs
+            """gamestate ID"""
+            self.team_size: int = team_size
+            """how big is the team?"""
+            self.hammer: bool = hammer
+            """Is this ga,estate a hammer?"""
+            self.is_leader: bool = ldr
+            """would this player have been leader?"""
+            self.is_on: bool = on
+            """is this player on the team?"""
+            self.voted_for: bool = voted_for
+            """did this player vote for the team?"""
+            self.sabs: float = predicted_sabs
+            """how many sabotages are we predicting?"""
+
+    def simple_spy_probability(
+            self,
+            everything_before_round: int = -1,
+            lookahead: bool = False,
+            lookahead_info: "PlayerRecord.LookaheadInfo" = None
+       ) -> float:
         """
         Works out how likely this player is to be a spy, given their actions until the current round.
         :param everything_before_round: Current round (rounds since game start). Defaults to -1
         If negative/unspecified/not an index of a round that has been reached, takes everything
         known so far into account. If specified (value of n), takes everything up before the nth round into account.
+        :param lookahead: If we are going to attempt a lookahead to after the outcome of this round
+        :param lookahead_info: data about the lookahead we are attempting
 
         :return: a float indicating how suspicious this player currently is.
         If there's no data yet, their sus level is 0.5
         If they have rejected a hammer vote, their sus level is 1
         otherwise,
-        ((sabotages on lead missions * lead missions) + (sabotages on attended missions * attended)) / (lead * attended)
+        (
+            (sabotages on lead missions/4) +
+            sabotages on attended missions +
+            (sabotages on missions not on but voted for/4)
+        ) / ((lead/4) + attended + (not on but voted for/4))
         """
         #import traceback
         #traceback.print_stack()
@@ -1209,6 +1233,9 @@ class PlayerRecord(object):
         #  Could try to use some neural networks/bayesian belief stuff/etc.
         #  maybe factoring in votes?
 
+        if lookahead:
+            if lookahead_info is None:
+                lookahead = False  # aborting the lookahead if we don't know anything about the lookahead
 
         if everything_before_round < 0:  # if negative value given, we take everything so far into account
             everything_before_round = len(self._all_missions_and_sabotages_with_teams)
@@ -1220,11 +1247,13 @@ class PlayerRecord(object):
 
         #print(all_prior_rounds)
 
-        if len(all_prior_rounds) == 0:
-            return 0.25  # 0.25 suspicion if no data
+        if len(all_prior_rounds) == 0 and not lookahead:
+            return 0.25  # 0.25 suspicion if no data (and not looking ahead at new data)
 
         if len([h for h in self.hammers_thrown if h in all_prior_rounds]) > 0:
-            return 1  # only a spy would throw a hammer vote.
+            return 1.0  # only a spy would throw a hammer vote.
+        if lookahead and lookahead_info.hammer and not lookahead_info.voted_for:
+            return 1.0  # if we're looking ahead, and we're predicting a no vote for a hammer, that's sus
 
         lead_sus: List[float] = [m[1] for m in self.mission_teams_lead_sus_levels if m[0] in all_prior_rounds]
         been_on_sus: List[float] = [m[1] for m in self.mission_teams_been_on_sus_levels if m[0] in all_prior_rounds]
@@ -1232,9 +1261,18 @@ class PlayerRecord(object):
         not_on_voted_sus: List[float] =\
             [m[1] for m in self.sus_levels_of_non_hammer_teams_approved_whilst_not_on if m[0] in all_prior_rounds]
 
-        has_lead_missions: bool = len(lead_sus) > 0
+        if lookahead and lookahead_info.sabs != -1:
+            lookahead_sus: float = lookahead_info.sabs / lookahead_info.team_size
+            if lookahead_info.is_leader:
+                lead_sus.append(lookahead_sus)
+            if lookahead_info.is_on:
+                been_on_sus.append(lookahead_sus)
+            elif lookahead_info.voted_for:
+                not_on_voted_sus.append(lookahead_sus)
+
+        has_lead_missions: bool = False  # len(lead_sus) > 0
         has_been_on_missions: bool = len(been_on_sus) > 0
-        voted_for_missions_not_on: bool = len(not_on_voted_sus) > 0
+        voted_for_missions_not_on: bool = False  # len(not_on_voted_sus) > 0
 
         # voted_for_sus: List[float] = [m[1] for m in self.approved_teams_sus_levels if m[0] in all_prior_rounds]
         # voted_against_sus: List[float] = [m[1] for m in self.rejected_teams_sus_levels if m[0] in all_prior_rounds]
@@ -1245,7 +1283,11 @@ class PlayerRecord(object):
             lead_len = len(lead_sus)
             been_len = len(been_on_sus)
             voted_len = len(not_on_voted_sus)
-            return min((sum(lead_sus)/4) + (sum(been_on_sus)) + (sum(not_on_voted_sus)/4) / (lead_len/4 + been_len + voted_len/4), 1)
+            return min(
+                #(sum(lead_sus)/4) + (sum(been_on_sus)) + (sum(not_on_voted_sus)/4) /
+                #(lead_len/4 + been_len + voted_len/4)
+                sum(been_on_sus) / been_len
+                , 1.0)
             #  return (sum(lead_sus) * max(1,lead_len)) + (sum(been_on_sus) * max(1, been_len)) / (lead_len + been_len) * (max(1, lead_len) * max(1, been_len))
         else:
             return 0.25
@@ -1396,7 +1438,7 @@ class SpySabotageChanceStats(object):
 
             self._the_general_case[SpySabotageChanceStats.IndividualSpySabStats.AWKWARD][condition]\
                 [SpySabotageChanceStats.IndividualSpySabStats.COUNT] += 1
-            self._the_general_case[SpySabotageChanceStats.IndividualSpySabStats.AWKWARD][condition] \
+            self._the_general_case[SpySabotageChanceStats.IndividualSpySabStats.AWKWARD][condition]\
                 [SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED] += sab_count
 
         def _add_info_for_general_case_one_spy(self, sab: int, condition: str) -> None:
@@ -1465,7 +1507,7 @@ class SpySabotageChanceStats(object):
                 [SpySabotageChanceStats.IndividualSpySabStats.COUNT]
             if gc_count > 0:
                 return self._the_general_case[SpySabotageChanceStats.IndividualSpySabStats.AWKWARD][condition]\
-                [SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED] / gc_count
+                       [SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED] / gc_count
             else:
                 return -1
 
@@ -1513,7 +1555,9 @@ class SpySabotageChanceStats(object):
                     return self._lead_missions_at_gamestates[gs]\
                                [SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED] / lead_count
                 else:
-                    return self._single_spy_general_case_probability(SpySabotageChanceStats.IndividualSpySabStats.LEADER)
+                    return self._single_spy_general_case_probability(
+                        SpySabotageChanceStats.IndividualSpySabStats.LEADER
+                    )
             else:
                 not_lead_count: int = self._been_on_missions_at_gamestates[gs]\
                     [SpySabotageChanceStats.IndividualSpySabStats.COUNT]
@@ -1526,9 +1570,6 @@ class SpySabotageChanceStats(object):
                     )
 
     def __init__(self):
-        # TODO: set this up, dictionary of spy stat objects, and one dummy stat object as an aggregate for agents without
-        #  any of their own data
-        # TODO: how likely is a given spy to sabotage?
         self._default_stats: "SpySabotageChanceStats.IndividualSpySabStats" =\
             SpySabotageChanceStats.IndividualSpySabStats("default")
         """A stats object for a generic spy (aggregate for every spy ever)"""
@@ -1684,7 +1725,7 @@ class GameRecord(object):
             spy2_name: []
         }
         im_spy1: bool = im_spy and me == the_spies[0]
-        im_spy2: bool = im_spy and not im_spy1
+        # im_spy2: bool = im_spy and not im_spy1
 
         missions_that_happened: List[Tuple[int, TeamRecord]] = [kv for kv in self._team_records.items() if
                                                                 kv[1].sabotages != -1]
@@ -1727,6 +1768,153 @@ class GameRecord(object):
 
         return info_dict
 
+    @property
+    def list_of_state_ids(self) -> List[int]:
+        """
+        Obtain the state IDs that were encountered during this game.
+        :return: list of the state IDs encountered.
+        """
+        return [*self._team_records.keys()]
+
+
+class WinProbabilitiesTable(object):
+    """
+    A table of sorts used to get the probability of a resistance win happening from a given role allocation
+    enum at a given gamestate.
+
+    """
+
+    COUNT: str = "count"
+    R_WINS: str = "r_wins"
+
+    def __init__(self):
+
+        self._win_probs_tables: Dict[int, Dict[RoleAllocationEnum, Dict[str, int]]] = dict.fromkeys(
+            GamestateTree.get_all_non_terminal_gamestates_indices(), dict.fromkeys(
+                RoleAllocationEnum.__members__.values(), {
+                    WinProbabilitiesTable.COUNT: 0,
+                    WinProbabilitiesTable.R_WINS: 0
+                }
+            )
+        )
+        """
+        A table which, for each gamestate and role allocation enum, holds the count of times that this situation
+        was encountered, and how often it lead to a win.
+        """
+        self._total_win_probs_table: Dict[int, Dict[str, int]] = dict.fromkeys(
+            GamestateTree.get_all_non_terminal_gamestates_indices(),
+            {
+                WinProbabilitiesTable.COUNT: 0,
+                WinProbabilitiesTable.R_WINS: 0
+            }
+        )
+        """
+        Keeps track of the overall count of times that each gamestate was reached, and how many times it lead
+        to a resistance win.
+        """
+
+    def role_alloc_win_probs_from_gs(self, gs_id: int) -> Dict[RoleAllocationEnum, float]:
+        """
+        Obtains a win probability table for a given gamestate (in the form dict[RoleAllocationEnum, float]
+        :param gs_id: the ID of the gamestate we're attempting to get a win probability for
+        :return: dictionary of (role allocation, chance of resistance winning)
+        """
+        if gs_id == GamestateTree.get_res_win_index():
+            return dict.fromkeys(RoleAllocationEnum.__members__.values(), 1)
+        elif gs_id == GamestateTree.get_spy_win_index():
+            return dict.fromkeys(RoleAllocationEnum.__members__.values(), 0)
+
+        win_probs: Dict[RoleAllocationEnum, float] = {}
+
+        for kv in self._win_probs_tables[gs_id].items():
+
+            s_count: int = kv[1][WinProbabilitiesTable.COUNT]
+            if s_count > 0:
+                win_probs[kv[0]] = kv[1][WinProbabilitiesTable.R_WINS] / s_count
+            else:
+                win_probs[kv[0]] = 0.5
+
+        return win_probs
+
+    def win_probs_from_gs_and_alloc(self, gs_id: int, spies: RoleAllocationEnum) -> float:
+        """
+        Wrapper for the above method but just returns the info for the known RoleAllocationEnum. so it's less verbose
+        later on.
+        :param gs_id: id of the gamestate we need info from
+        :param spies: the known roleallocationenum representing the spies
+        :return: the chance of a resistance win for given known spies and gamestate.
+        """
+        return self.role_alloc_win_probs_from_gs(gs_id)[spies]
+
+    def win_probs_of_children_from_gs_and_alloc(self, gs_id: int, spies: RoleAllocationEnum) -> \
+            Tuple[float, float, float]:
+        """
+        Get the win probabilities of the child states of the given gamestate, factoring in a given role allocation enum
+        :param gs_id: ID of current gamestate (we want the win probabilities of its children)
+        :param spies: Known roleallocationenum for the spies
+        :return: (res win if pass, res win if sabotaged, res win if rejected)
+        """
+        if gs_id == GamestateTree.get_res_win_index():
+            return 1, 1, 1
+        elif gs_id == GamestateTree.get_spy_win_index():
+            return 0, 0, 0
+
+        gs_node: GamestateTree.GamestateTreeNode = GamestateTree.get_gstnode_from_index(gs_id)
+
+        return self.win_probs_from_gs_and_alloc(gs_node.missionPassedChild, spies),\
+               self.win_probs_from_gs_and_alloc(gs_node.voteFailedChild, spies),\
+               self.win_probs_from_gs_and_alloc(gs_node.voteFailedChild, spies)
+
+
+
+    def win_probs_from_gs(self, gs_id: int) -> float:
+        """
+        Obtain the overall win probabilities from the given gamestate,
+        without factoring in any role allocation enums
+        :param gs_id: the gamestate ID that we're trying to get data for
+        :return: chance of a resistance win from this gamestate
+        """
+        if gs_id == GamestateTree.get_res_win_index():
+            return 1
+        elif gs_id == GamestateTree.get_spy_win_index():
+            return 0
+
+        reach_count: int = self._total_win_probs_table[gs_id][WinProbabilitiesTable.COUNT]
+        if reach_count > 0:
+            return self._total_win_probs_table[gs_id][WinProbabilitiesTable.R_WINS]/reach_count
+        else:
+            return 0.5
+
+    def get_win_probs_of_gs_children(self, gs_id: int) -> Tuple[float, float, float]:
+        """
+        Get the win probabilities of the child states of the given gamestate, not factoring in role allocations
+        :param gs_id: id of the gamestate we want the child info from
+        :return: (res win if pass, res win if sabotaged, res win if rejected)
+        """
+        if gs_id == GamestateTree.get_res_win_index():
+            return 1, 1, 1
+        elif gs_id == GamestateTree.get_spy_win_index():
+            return 0, 0, 0
+        gs_node: GamestateTree.GamestateTreeNode = GamestateTree.get_gstnode_from_index(gs_id)
+
+        return self.win_probs_from_gs(gs_node.missionPassedChild), \
+               self.win_probs_from_gs(gs_node.voteFailedChild), \
+               self.win_probs_from_gs(gs_node.voteFailedChild)
+
+    def add_info_to_table(self, states: List[int], res_win: bool, spies: RoleAllocationEnum) -> None:
+        """
+        Adds info from a game to the table
+        :param states: the states encountered through the game
+        :param res_win: whether the resistance eventually won
+        :param spies: which roles the spies had
+        """
+        for s in states:
+            self._win_probs_tables[s][spies][WinProbabilitiesTable.COUNT] += 1
+            self._total_win_probs_table[s][WinProbabilitiesTable.COUNT] += 1
+            if res_win:
+                self._win_probs_tables[s][spies][WinProbabilitiesTable.R_WINS] += 1
+                self._total_win_probs_table[s][WinProbabilitiesTable.R_WINS] += 1
+
 
 class NeuralNetworker(object):
     """
@@ -1761,6 +1949,15 @@ class rl18730(Bot):
             _sabotage_chance_stats: SpySabotageChanceStats = pickle.load(p)
             p.close()
 
+    _win_probabilities_table: WinProbabilitiesTable = WinProbabilitiesTable()
+    """
+    A table to keep track of the chance of winning with each role combo from each gamestate
+    """
+    if os.path.exists(resources_file_path / "win_probs.p"):
+        with open(resources_file_path / "win_probs.p", "rb") as p:
+            _win_probabilities_table: SpySabotageChanceStats = pickle.load(p)
+            p.close()
+
     def __init__(self, game: State, index: int, spy: bool):
         """Constructor called before a game starts.  It's recommended you don't
         override this function and instead use onGameRevealed() to perform
@@ -1782,8 +1979,8 @@ class rl18730(Bot):
         """
         super().__init__(game, index, spy)
 
-        self.spies: List[TPlayer] = []
-        """List of known spies (empty unless spy)"""
+        self.spies: Set[TPlayer] = set()
+        """Set of known spies (empty unless spy)"""
 
         self.current_gamestate: int = 0
         """Will hold the index of the current gamestate (via GamestateTree)"""
@@ -1848,12 +2045,27 @@ class rl18730(Bot):
         If I'm a spy, this is who the other spy is. If there is no other spy (because we're not a spy), this is None.
         """
 
+        # noinspection PyTypeChecker
+        self.spy_RAE: RoleAllocationEnum = None
+        """
+        Role allocation enum for the known spies.
+        """
 
-    def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
+        # TODO: perhaps these might help the resistance win rate?
+        self.passed_teams: List[List[TPlayer]] = []
+        """
+        A list of teams that have managed to pass a mission without any sabotages happening
+        """
+        self.sabotaged_teams: List[List[TPlayer]] = []
+        """
+        A list of teams that have ended in a sabotage.
+        """
+
+    def onGameRevealed(self, players: List[TPlayer], spies: Set[TPlayer]) -> None:
         """This function will be called to list all the players, and if you're
         a spy, the spies too -- including others and yourself.
         :param players:  List of all players in the game including you.
-        :param spies:    List of players that are spies (if you are a spy), or an empty list (if you aren't a spy).
+        :param spies:    Set of players that are spies (if you are a spy), or an empty set (if you aren't a spy).
         """
 
         self.temp_team_record = TempTeamRecord()
@@ -1869,12 +2081,15 @@ class rl18730(Bot):
         if self.spy:
             self.spies = spies
             # take note of the spies if we are a spy
+            spy_bools: List[bool] = []
             for p in players:
                 is_spy: bool = p in spies
                 self.player_records[p].identity_is_known(is_spy)
                 if is_spy and p != self:
                     # we take note of who the other spy is.
                     self.other_spy = p
+                spy_bools.append(is_spy)
+            self.spy_RAE = RoleAllocationEnum(tuple(spy_bools))
 
         self.role_combos_that_im_in = tuple(
             [t for t in RoleAllocationEnum.__members__.values() if self in t.extract_sublist_from(players)]
@@ -1890,7 +2105,6 @@ class rl18730(Bot):
 
         self.leader_order.clear()
         self.leader_order = players.copy()
-
 
         pass
 
@@ -1943,6 +2157,18 @@ class rl18730(Bot):
             return team_list
 
         elif count == 2:
+            if not self.spy and not self.game.losses == 2 and not self.game.wins == 2 and random.random() < 0.5:
+                # If it's turn 3 (count 2), and we're in the resistance, and no team is about to win,
+                # we might try to bait the two spies (or at least the players we suspect to be spies) into doing
+                # a double-sabotage, thereby exposing them as spies.
+                # After all, chances are that the spies AI might not really be prepared for this sort of situation,
+                # and could make a blunder.
+                # Of course, this could backfire if they were to learn that this bot does this, or if they both
+                # refrain from sabotaging if they aren't the leader.
+                # So this only happens 50% of the time, so it can only be a blunder 50% of the time.
+                return max(
+                    random.sample(self.the_other_role_combos, 6), key=lambda k: self.suspicion_for_each_role_combo[k]
+                ).extract_sublist_from(players)
 
             player_suspicions: Dict[TPlayer, float] = self.heuristic_suspicion_dict
             team_list.append(min(random.sample(self.others(), 4), key=lambda k: player_suspicions[k]))
@@ -1954,7 +2180,6 @@ class rl18730(Bot):
 
         #the_others: List[TPlayer] = self.others()
         return [self] + least_suspicious
-
 
     def onTeamSelected(self, leader: TPlayer, team: List[TPlayer]) -> None:
         """Called immediately after the team is selected to go on a mission,
@@ -1971,14 +2196,120 @@ class rl18730(Bot):
         :return: bool     Answer Yes/No.
         """
 
-        if self.game.tries == 5:
-            if self.spy and self.game.turn == 5:
-                return False  # if we're a spy and it's the final hammer, may as well vote no (nothing to lose)
-            return True  # voting against a hammer is kinda sus ngl
+        is_hammer: bool = self.game.tries == 5
+
+        if is_hammer:
+            if self.spy:
+                if self.game.turn == 5:
+                    return False  # if we're a spy and it's the final hammer, may as well vote no (nothing to lose)
+                elif self.game.wins == 2 and len([s for s in self.spies if s in team]) == 0:
+                    # if the resistance need one more sabotage to win, and there are no spies on the team,
+                    # we need to reject it, or we are guaranteed to lose.
+                    return False
+                pass
+            else:
+                return True  # voting against a hammer is kinda sus ngl
+
+        res_win_if_pass, res_win_if_fail, res_win_if_rej =\
+            rl18730._win_probabilities_table.get_win_probs_of_gs_children(self.current_gamestate)
+
+        # finds the most suspicious players (or, in other words, the most likely team of spies).
+        # if either of them are on this team, we vote it down.
+        normal_resistance_vote: bool = self._vote_like_a_normal_resistance_member(team)
 
         if self.spy:
 
+            # How likely are the resistance to win if the vote passes/fails/is rejected, considering allocation?
+            res_win_if_pass_a, res_win_if_fail_a, res_win_if_rej_a =\
+                rl18730._win_probabilities_table.win_probs_of_children_from_gs_and_alloc(
+                    self.current_gamestate, self.spy_RAE
+                )
+
             spies_on_team: int = len([s for s in self.spies if s in team])
+
+            current_sus: List[Tuple[TPlayer, float]] = sorted(
+                [*self.heuristic_suspicion_dict.items()],
+                key=lambda kv: kv[1]
+            )
+
+            predicted_sabotage_count: float = spies_on_team
+            if spies_on_team == 2:
+                # if there are two spies on team, our predicted sabotage count for the lookahead will be the
+                # predicted sabotage count for our fellow spy in this sort of situation.
+                predicted_sabotage_count = rl18730._sabotage_chance_stats.get_sabotage_chance(
+                    self.other_spy.name,
+                    self.current_gamestate,
+                    self.other_spy == self.game.leader,
+                    True,
+                    self.game.leader in self.spies
+                )
+
+            others_lookahead_sus: Dict[TPlayer, float] = {}
+            for p in self.others():
+                others_lookahead_sus[p] = self.player_records[p].simple_spy_probability(
+                    lookahead=True,
+                    lookahead_info=PlayerRecord.LookaheadInfo(
+                        self.current_gamestate,
+                        len(team),
+                        is_hammer,
+                        self.game.leader == p,
+                        p in team,
+                        is_hammer or p in team,
+                        # we assume that the other players will vote on the basis of whether or not they're in the team,
+                        # but will vote for it anyway if it's hammer.
+                        predicted_sabotage_count
+                    )
+                )
+
+            lookahead_sus_if_i_vote_yes: List[Tuple[TPlayer, float]] = sorted(
+                random.sample(  # shuffling the list first in case there's a tie for sus levels
+                    [*others_lookahead_sus.items()] + [
+                        (
+                            self,
+                            self.player_records[self].simple_spy_probability(
+                                lookahead=True,
+                                lookahead_info=PlayerRecord.LookaheadInfo(
+                                    self.current_gamestate,
+                                    len(team),
+                                    is_hammer,
+                                    self.game.leader == self,
+                                    self in team,
+                                    True,
+                                    predicted_sabotage_count
+                                )
+                            )
+                        )
+                    ], 5
+                ), key=lambda kv: kv[1])
+
+            lookahead_sus_if_i_vote_no: List[Tuple[TPlayer, float]] = sorted(
+                random.sample(  # also shuffling the list first in case there's a tie for sus levels
+                    [*others_lookahead_sus.items()] + [
+                        (
+                            self,
+                            self.player_records[self].simple_spy_probability(
+                                lookahead=True,
+                                lookahead_info=PlayerRecord.LookaheadInfo(
+                                    self.current_gamestate,
+                                    len(team),
+                                    is_hammer,
+                                    self.game.leader == self,
+                                    self in team,
+                                    False,
+                                    predicted_sabotage_count
+                                )
+                            )
+                        )
+                    ], 5
+                ), key=lambda kv: kv[1])
+
+            current_sus_level: int = [kv[0] for kv in current_sus].index(self)
+            voted_yes_sus_level: int = [kv[0] for kv in lookahead_sus_if_i_vote_yes].index(self)
+            voted_no_sus_level: int = [kv[0] for kv in lookahead_sus_if_i_vote_no].index(self)
+
+            other_spy_current_sus: int = [kv[0] for kv in current_sus].index(self.other_spy)
+            other_spy_sus_level_if_yes: int = [kv[0] for kv in lookahead_sus_if_i_vote_yes].index(self.other_spy)
+            other_spy_sus_level_if_no: int = [kv[0] for kv in lookahead_sus_if_i_vote_no].index(self.other_spy)
 
             if spies_on_team == 0:
                 # if there are no spies to sabotage this mission
@@ -1991,6 +2322,17 @@ class rl18730(Bot):
                 #  if this team gets approved (non-sabotage from this gamestate) or rejected (from this gamestate).
                 #  If a resistance win is more likely if approved, vote no. If a resistance win is more likely if
                 #  rejected, vote yes.
+
+                # Vote yes if the resistance are less likely to win if it passes than if it's rejected,
+                # or if voting in favour of it makes us seem less suspicious relative to the others than if we
+                # were to vote no to it, as long as either we (or the other spy) will still be within the 3 least
+                # suspicious players if it does pass.
+
+                return res_win_if_pass < res_win_if_rej or (
+                        voted_yes_sus_level < voted_no_sus_level and (
+                            voted_yes_sus_level < 3 or other_spy_sus_level_if_yes < 3
+                        )
+                )
 
                 pass
 
@@ -2007,48 +2349,53 @@ class rl18730(Bot):
                         # If the team contains either of the two (other) players who are most suspicious now,
                         # I act like how any agent would in this situation, and vote against this team if it
                         # contains either of the two other players I currently suspect the most of being spies.
-                        return self._vote_like_a_normal_resistance_member(team)
 
-                else:  # if the other spy is on the team
-                    if self.game.turn == 3 and self.game.losses == 2:
-                        # may as well support it if it's turn 3 and we're one away from winning
+                        # Alternatively, if voting yes would allow me or my fellow spy to have a sus level below 3
+                        # (either 0, 1, or 2; in other words; not as one of the two most suspicious team members),
+                        # we vote yes.
+
+                        return normal_resistance_vote \
+                               or (voted_yes_sus_level < 3 or other_spy_sus_level_if_yes < 3)
+
+                else:  # if the other spy is on the team (without us)
+                    if self.game.turn == 3 and self.game.losses == 2 and current_sus_level < 3:
+                        # may as well support it if it's turn 3 and we're one away from winning,
+                        # as long as we currently don't look _too_ suspicious.
                         return True
                     # otherwise, this spy would act like it normally would if it was a resistance member.
-                    return self._vote_like_a_normal_resistance_member(team)
-
+                    return normal_resistance_vote or\
+                           (voted_yes_sus_level < 3 or other_spy_sus_level_if_yes < 3)
 
             else:
                 # TODO: is it a good idea for me to vote for this team if there are two spies on it?
 
                 # First things first: we act natural. If we have a decent reason to vote against it, vote against it.
                 # there's a ~50% chance that we will have an excuse to vote against it.
-                if not self._vote_like_a_normal_resistance_member(team):
+                if not normal_resistance_vote:
                     return False
 
-                if self.other_spy == self.game.leader:
+                if self.other_spy == self.game.leader or self.game.losses == 2:
                     # if the leader is the other spy, chances are that they have a cunning plan.
+                    # or if the resistance have lost twice already, who cares if we accidentally sabotage twice?
                     return True
                 else:
-                    # TODO use a neural network to work out if the optimal play here would be to
-                    #  let the vote fail or to let the vote pass.
-                    pass
 
+                    if res_win_if_fail < res_win_if_pass:  # if resistance are less likely to win if it's a loss
+                        return voted_yes_sus_level < 3 or other_spy_sus_level_if_yes < 3
+                    else:
+                        return False
 
                 pass
-
 
             # TODO as spy, work out:
             #      is it safe to let the resistance win this round if there aren't any spies on the team?
             #      if this bot is on the team, is it safe to sabotage it without looking sus?
             #           and if there is another spy, should this agent sabotage, or let the other spy do it?
-            return True
-
+            # return True
+            pass
 
         # TODO as resistance, work out how likely the team is to have a spy who will sabotage it on it.
-
-        # finds the most suspicious players (or, in other words, the most likely team of spies).
-        # if either of them are on this team, we vote it down.
-        return self._vote_like_a_normal_resistance_member(team)
+        return normal_resistance_vote
 
     def _vote_like_a_normal_resistance_member(self, team: List[TPlayer]) -> bool:
         """
@@ -2061,11 +2408,18 @@ class rl18730(Bot):
         :return: true if that team doesn't contain either of the two players we currently think are
         most likely to be spies.
         """
+        if len(team) == 3 and self not in team:
+            # obviously got a spy on the team if there's 3 players and I'm not one of them
+            return False
+
         # finds the most suspicious players (or, in other words, the most likely team of spies).
         # if either of them are on this team, we vote it down.
         most_sus_players: List[TPlayer] = max(
             random.sample(self.the_other_role_combos, 6), key=lambda k: self.suspicion_for_each_role_combo[k]
         ).extract_sublist_from(self.game.players)
+
+        res_win_if_pass, res_win_if_fail, res_win_if_rej = \
+            rl18730._win_probabilities_table.get_win_probs_of_gs_children(self.current_gamestate)
 
         if most_sus_players[0] in team or most_sus_players[1] in team:
             return False
@@ -2081,6 +2435,8 @@ class rl18730(Bot):
             [p for p in self.game.players if votes[p.index]],
             sum(votes) >= 3
         )
+        if self.game.tries == 5 and sum(votes) != 5:
+            self.say("{} are spies, they threw hammer >:(".format([p for p in self.game.players if not votes[p.index]]))
 
         pass
 
@@ -2119,13 +2475,17 @@ class rl18730(Bot):
                 return False
 
             # works out how likely the other spy is to sabotage,
-            return random.random() > rl18730._sabotage_chance_stats.get_sabotage_chance(
+            other_spy_sab_chance: float = rl18730._sabotage_chance_stats.get_sabotage_chance(
                 self.other_spy.name,
                 self.current_gamestate,
                 self.game.leader == self.other_spy,
                 True,
                 self.game.leader in self.spies
             )
+            if other_spy_sab_chance > 0.5:
+                # if the other spy is at least 50% likely to sabotage, we let them sabotage.
+                return False
+
 
         # TODO: is it better to sabotage or to let this one through unsabotaged? might need to refer to the results
         #  from the NN earlier on.
@@ -2155,12 +2515,9 @@ class rl18730(Bot):
         (jobs such as exporting this round's team record, putting that on the history of team records,
         updating the player records with the results of this round, etc)
 
-        :return:
+        :return: nothing.
         """
 
-        # index_sabotage_tuple: Tuple[int, int] = (self.current_gamestate, this_round_record.sabotages)
-
-        # TODO: replace the this_round_record stuff with data taken from the temp record (for now)
         for p in self.game.players:
             self.player_records[p].post_round_update(
                 self.current_gamestate,
@@ -2172,8 +2529,6 @@ class rl18730(Bot):
             )
 
         heuristic_suspicions: Dict[TPlayer, float] = self.heuristic_suspicion_dict
-
-        #print("heuristic suspicions done.")
 
         self.temp_team_record.add_current_spy_probabilities(heuristic_suspicions)
 
@@ -2195,8 +2550,6 @@ class rl18730(Bot):
 
         # no need to bother normalizing the heuristic suspicions for our internal use
 
-
-
         #self.suspicion_for_each_role_combo[rp] = \
         #    sum(heuristic_suspicions[p] for p in those_players)/2
         # (heuristic_suspicions[those_players[0]] + heuristic_suspicions[the_players[rp[1]]]) / 2
@@ -2204,7 +2557,6 @@ class rl18730(Bot):
         #print("CHANCES OF EACH TEAM BEING SPIES: ")
         #for rp in [*self.suspicion_for_each_role_combo.keys()]:
         #    print("{}: {}".format(rp, self.suspicion_for_each_role_combo[rp]))
-
 
         #this_round_record: TeamRecord = self.temp_team_record.generate_teamrecord_from_data
 
@@ -2220,21 +2572,22 @@ class rl18730(Bot):
             self.temp_team_record.generate_teamrecord_from_data
         )
 
-
         pass
 
-    def announce(self) -> Dict[TPlayer, float]:
+    def announce(self) -> Dict[Player, float]:
         """Publicly state beliefs about the game's state by announcing spy
         probabilities for any combination of players in the game.  This is
         done after each mission completes, and takes the form of a mapping from
         player to float.  Not all players must be specified, and of course this
         can be innacurate!
 
-        :return: Dict[TPlayer, float]     Mapping of player to spy probability.
+        :return: Dict[Player, float]     Mapping of player to spy probability.
         """
-        return {}
+        hsd: Dict[Player, float] = self.heuristic_suspicion_dict
+        hsd.pop(self)  # so I don't accidentally incriminate myself.
+        return hsd
 
-    def onAnnouncement(self, source: TPlayer, announcement: Dict[TPlayer, float]) -> None:
+    def onAnnouncement(self, source: Player, announcement: Dict[Player, float]) -> None:
         """Callback if another player decides to announce beliefs about the
         game.  This is passed as a potentially incomplete mapping from player
         to spy probability.
@@ -2250,7 +2603,7 @@ class rl18730(Bot):
 
         :param message:       String containing free-form text.
         """
-        self.log.info(message)
+        super().say(message)
 
     def onMessage(self, source: TPlayer, message: str) -> None:
         """Callback if another player sends a general free-form message to the
@@ -2259,9 +2612,13 @@ class rl18730(Bot):
         :param source:       Player sending the message.
         :param message:  Arbitrary string for the message sent.
         """
+        if source in max(
+            random.sample(self.the_other_role_combos, 6), key=lambda k: self.suspicion_for_each_role_combo[k]
+        ).extract_sublist_from(self.game.players):
+            self.say("better shut up, sussy baka")
         pass
 
-    def onGameComplete(self, win: bool, spies: List[TPlayer]) -> None:
+    def onGameComplete(self, win: bool, spies: Set[TPlayer]) -> None:
         """Callback once the game is complete, and everything is revealed.
 
         This is where stuff gets logged to rl18730.log.
@@ -2281,9 +2638,8 @@ class rl18730(Bot):
                 the values in this tuple for the players who are spies are set to true, false if resistance member.
 
         :param win:          Boolean true if the Resistance won.
-        :param spies:        List of only the spies in the game.
+        :param spies:        Set of only the spies in the game.
         """
-
         known: List[int] = []
 
         for p in self.game.players:
@@ -2314,7 +2670,6 @@ class rl18730(Bot):
             "spies": tuple(known)
         }
 
-
         #for k in [*self.team_records.keys()]:
         #    log_dict["teams"][k] = self.team_records[k].loggable_dict
 
@@ -2324,6 +2679,12 @@ class rl18730(Bot):
             self.game_record.get_info_about_sabotages_from_spies_for_sabotage_records(
                 [*spies], self, self.spy, self.missions_that_i_sabotaged
             )
+        )
+
+        rl18730._win_probabilities_table.add_info_to_table(
+            self.game_record.list_of_state_ids,
+            win,
+            RoleAllocationEnum(tuple(known))
         )
 
         """
@@ -2337,7 +2698,9 @@ class rl18730(Bot):
         with open(resources_file_path/"sabotages.p", "wb") as p:
             pickle.dump(rl18730._sabotage_chance_stats, p)
             p.close()
-
+        with open(resources_file_path/"win_probs.p", "wb") as p:
+            pickle.dump(rl18730._win_probabilities_table, p)
+            p.close()
 
         # for k in [*self.team_records.keys()]:
         #    print("{:3d} {}".format(k, self.team_records[k]))

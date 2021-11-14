@@ -54,7 +54,7 @@ class CompetitionRound(Game):
 
         spies = [t for t in team if t.spy]
         if player.spy:
-            # When there are spies, we expect support.
+            # When there are spies, we expect support/upvotes.
             if spies:    
                 s.spyVotesRes.sample(int(vote))
             # For missions without spies, we expect down vote.
@@ -62,7 +62,7 @@ class CompetitionRound(Game):
                 s.spyVotesSpy.sample(int(not vote))
             return
 
-        # When there are no spies, we expect support.
+        # When there are no spies, we expect support/upvotes.
         if not spies:    
             s.resVotesRes.sample(int(vote))
         # For missions with spies, we expect down vote.
@@ -161,7 +161,7 @@ class CompetitionRunner(object):
             sys.stdout.write(text)
             sys.stdout.flush()
 
-        n_processes = 1  # multiprocessing.cpu_count()
+        n_processes = multiprocessing.cpu_count()  # 1
         pool = multiprocessing.Pool(n_processes, setup)
         # pool = itertools
         for i, stats in enumerate(pool.imap(play, self.listGameSelections())):
@@ -171,8 +171,8 @@ class CompetitionRunner(object):
             if not self.quiet:
                 if (i+1) % 500 == 0:  output('(%02i%%)\n' % (100*(i+1)/self.rounds))
                 elif (i+1) % 125 == 0: output('O')
-                elif (i+1) %  25 == 0: output('o')
-                elif (i+1) %  5 == 0: output('.')
+                elif (i+1) % 25 == 0: output('o')
+                elif (i+1) % 5 == 0: output('.')
 
     def echo(self, *args):
         print(' '.join([str(a) for a in args]))
@@ -193,7 +193,7 @@ class CompetitionRunner(object):
         results = sorted(self.statistics, key=lambda x: self.statistics[x].total().estimate(), reverse=True)
         bot = [c for c in self.competitors if c.__name__ == results[-1]][0]
         other = [c for c in self.competitors if c.__name__ == results[-2]][0]
-        return (bot, self.statistics[results[-1]].total()),                  \
+        return (bot, self.statistics[results[-1]].total()),\
                (other, self.statistics[results[-2]].total())
 
     def show(self, summary = False):
@@ -206,11 +206,11 @@ class CompetitionRunner(object):
             return
 
         if not summary:
-            self.echo("SPIES\t\t\t\t(vote,\t\t voted,\t\t selected,\t selection)")
+            self.echo("SPIES: wins\t\t\t\t(vote(Res,Spy),\t\t voted,\t\t selected,\t selection)")
             for s in sorted(self.statistics.items(), key = lambda x: x[1].spyWins.estimate(), reverse = True):
                 self.echo(" ", '{0:<16s}'.format(s[0]), s[1].spyWins, "\t", s[1].spyVotesRes, s[1].spyVotesSpy, "\t", s[1].spyVoted, "\t\t", s[1].spySelected, "\t\t", s[1].spySelection)
 
-            self.echo("RESISTANCE\t\t\t(vote,\t\t voted,\t\t selected,\t selection)")
+            self.echo("RESISTANCE: wins\t\t\t(vote(Res,Spy),\t\t voted,\t\t selected,\t selection)")
             for s in sorted(self.statistics.items(), key = lambda x: x[1].resWins.estimate(), reverse = True):
                 self.echo(" ", '{0:<16s}'.format(s[0]), s[1].resWins, "\t", s[1].resVotesRes, s[1].resVotesSpy, "\t", s[1].resVoted, "\t\t", s[1].resSelected, "\t\t", s[1].resSelection)
             self.echo("TOTAL")

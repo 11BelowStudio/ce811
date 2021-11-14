@@ -14,7 +14,7 @@ class Rogue(Bot):
         self.index = index
         pass
 
-    def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
+    def onGameRevealed(self, players: List[TPlayer], spies: Set[TPlayer]) -> None:
 # If you're a spy, this function will be called to list the spies, including others and yourself.
         self.iSabotaged = False
         self.players = players
@@ -158,7 +158,7 @@ class Rogue(Bot):
         type = {True: "SPY", False: "RESISTANCE"}
         return "<%s #%i %s>" % (self.name, self.index, type[self.spy])
 
-    def onGameComplete(self, win: bool, spies: List[TPlayer]) -> None:
+    def onGameComplete(self, win: bool, spies: Set[TPlayer]) -> None:
         return self._onGameComplete(self.game.players, spies)
 
     def _onGameComplete(self, players, spies):
