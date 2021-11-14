@@ -1,9 +1,15 @@
+import os
+import pickle
+import random
+
 from player import Bot, Player
 from game import State
 
 from typing import TypeVar, List, Dict, Set, Tuple, Iterable, FrozenSet, Union
 
 from enum import Enum
+
+from pathlib import Path
 
 import json
 
@@ -12,6 +18,18 @@ TPlayer = TypeVar("TPlayer", bound="Player")
 
 T = TypeVar("T")
 """A generic type that could be anything."""
+
+resources_file_path: Path = Path(__file__).parent/"rl18730"
+"""
+A file path for resources for this bot
+USAGE:
+    with open(resources_file_path/"filename",etc) as f:
+        file stuff goes here
+        f.close()
+        
+
+"""
+
 
 # Hi, my name is Rachel, and welcome to Jackass.
 # at least there are type annotations :^)
@@ -79,8 +97,6 @@ Resistance win (~w = P(win|ρ)) for each assignment ρ
 
 
 
-
-
 class RoleAllocationEnum(Enum):
     """An enumeration for each possible permutation of role allocations.
     Values are worked out via boolean values (true = spy, false = not spy)
@@ -114,9 +130,6 @@ class RoleAllocationEnum(Enum):
         Turns the value of this into a string for usage in json.dumps() stuff
         :return: a string ab, where a is index of first true, and b is index of second true
         """
-        # TODO: maybe replace it with a string version of a 1-hot encoded vector? ie 11000 instead of '01' for AB?
-        # first_index: int = self.value.index(True)
-        # return "{}{}".format(first_index, self.value[first_index+1:].index(True) + first_index + 1)
         return "".join(["1" if i else "0" for i in self.value])
 
     def from_jsoned_string(self, jsoned_string: str) -> "RoleAllocationEnum":
@@ -128,387 +141,7 @@ class RoleAllocationEnum(Enum):
         :param jsoned_string: the sort of string that to_string_for_json would expect to be given
         :return: the RoleAllocationEnum which that string describes.
         """
-        # TODO same change as described in the TODO for the above to_json_string method.
-        #if len(jsoned_string) != 2:
-        #    raise ValueError("You've given an invalid string, expected something like '01', got {}"
-        #                     .format(jsoned_string)
-        #                     )
-        #default_arr: List[bool, bool, bool, bool, bool] = [False, False, False, False, False]
-        #default_arr[int(jsoned_string[0])] = True
-        #default_arr[int(jsoned_string[1])] = True
-        #return RoleAllocationEnum(tuple(default_arr))
         return RoleAllocationEnum(tuple([True if n == "1" else False for n in jsoned_string]))
-
-
-class TeamRecord(object):
-    """
-    A record of the teams that have been nominated, who nominated them, whether or not the nomination passed,
-    the outcome of the mission, and who voted in favour of the team.
-
-    Properties are all read-only.
-    """
-
-    def __init__(self,
-                 team: Iterable[TPlayer],
-                 leader: TPlayer,
-                 mission_number: int,
-                 nomination_attempt: int,
-                 nomination_successful: bool,
-                 sabotages: int,
-                 voted_for_team: Iterable[TPlayer],
-                 prior_predicted_spy_probabilities: Dict[TPlayer, float],
-                 latter_predicted_spy_probabilities: Dict[TPlayer, float]
-                 ):
-        """
-        Constructor for this record of team information
-        :param team: who was on the team?
-        :param leader: who was the leader?
-        :param mission_number: which mission was this for?
-        :param nomination_attempt: which nomination attempt was this?
-        :param nomination_successful: did the nomination pass?
-        :param sabotages: how many times was the mission sabotaged?
-            (will be overwritten by -1 if nomination unsuccessful)
-        :param voted_for_team: who voted in favour of the team?
-        :param prior_predicted_spy_probabilities: predicted probabilities of each player being a spy,
-        as of the start of this turn
-        :param latter_predicted_spy_probabilities: predicted probabilities of each player being a spy,
-         as of the end of this turn.
-        """
-
-        self._team: Tuple[TPlayer, ...] = tuple(team)
-        self._leader: TPlayer = leader
-        self._mission_number: int = mission_number
-        self._nomination_attempt: int = nomination_attempt
-        self._nomination_successful: bool = nomination_successful
-        self._sabotages: int = sabotages if nomination_successful else -1
-        self._voted_for_team: FrozenSet[TPlayer] = frozenset(voted_for_team)
-        self._prior_predicted_spy_probabilities: Dict[TPlayer, float] = prior_predicted_spy_probabilities.copy()
-        self._latter_predicted_spy_probabilities: Dict[TPlayer, float] = latter_predicted_spy_probabilities.copy()
-        #self._predicted_spy_probabilities: Dict[TPlayer, float] = {}
-        #for p in [*predicted_spy_probabilities.keys()]:
-        #    self._predicted_spy_probabilities[p] = predicted_spy_probabilities[p]
-
-
-    @property
-    def team(self) -> Tuple[TPlayer, ...]:
-        """Who was on the team?"""
-        return self._team
-
-    @property
-    def leader(self) -> TPlayer:
-        """Who nominated the team?"""
-        return self._leader
-
-    @property
-    def mission_number(self) -> int:
-        """What mission was this for?"""
-        return self._mission_number
-
-    @property
-    def nomination_attempt(self) -> int:
-        """Which nomination was this?"""
-        return self._nomination_attempt
-
-    @property
-    def nomination_successful(self) -> bool:
-        """Did the nomination pass?"""
-        return self._nomination_successful
-
-    @property
-    def sabotages(self) -> int:
-        """How many times was the mission sabotaged? (-1 if it was rejected instead)"""
-        return self._sabotages
-
-    @property
-    def voted_for_team(self) -> FrozenSet[TPlayer]:
-        """Who voted in favour of the team?"""
-        return self._voted_for_team
-
-    @property
-    def prior_predicted_spy_probabilities(self) -> Dict[TPlayer, float]:
-        """What were the predicted probabilities of each player on the team being a spy?"""
-        return self._prior_predicted_spy_probabilities.copy()
-
-    @property
-    def latter_predicted_spy_probabilities(self) -> Dict[TPlayer, float]:
-        """What were the predicted probabilities of each player on the team being a spy?"""
-        return self._latter_predicted_spy_probabilities.copy()
-
-    @property
-    def public_belief_states_prior(self) -> Dict[RoleAllocationEnum, float]:
-        """Public belief states(?) for this gamestate (before the outcome of this mission attempt)."""
-
-        player_kv: List[TPlayer, float] = [*self._prior_predicted_spy_probabilities.items()]
-
-        public_state_dict: Dict[RoleAllocationEnum, float] = {}
-
-        for rp in RoleAllocationEnum.__members__.values():
-            chance_of_this_allocation: float = 1
-            rp_list = rp.get_value()
-            for r in range(0, len(rp_list)):
-                if rp_list[r]:
-                    chance_of_this_allocation *= player_kv[r][1]
-                else:
-                    chance_of_this_allocation *= (1 - player_kv[r][1])
-            public_state_dict[rp] = chance_of_this_allocation
-
-        total_chances: float = sum([*public_state_dict.values()])
-
-        if total_chances == 0:
-            total_chances = 1
-
-        for k in [*public_state_dict.keys()]:
-            public_state_dict[k] /= total_chances  # sum of hypotheses = 1 (hopefully)
-
-        return public_state_dict
-
-    @property
-    def public_belief_states_latter(self) -> Dict[RoleAllocationEnum, float]:
-        """Public belief states(?) for this gamestate (after the outcome of this mission attempt)."""
-
-        player_kv: List[TPlayer, float] = [*self._latter_predicted_spy_probabilities.items()]
-
-        public_state_dict: Dict[RoleAllocationEnum, float] = {}
-
-        for rp in RoleAllocationEnum.__members__.values():
-            chance_of_this_allocation: float = 1
-            rp_list = rp.get_value()
-            for r in range(0, len(rp_list)):
-                if rp_list[r]:
-                    chance_of_this_allocation *= player_kv[r][1]
-                else:
-                    chance_of_this_allocation *= (1 - player_kv[r][1])
-            public_state_dict[rp] = chance_of_this_allocation
-
-        total_chances: float = sum([*public_state_dict.values()])
-
-        if total_chances == 0:
-            total_chances = 1
-
-        for k in [*public_state_dict.keys()]:
-            public_state_dict[k] /= total_chances  # sum of hypotheses = 1 (hopefully)
-
-        return public_state_dict
-
-
-    def json_dumpable_public_belief_states(self, latter: bool = False) -> Dict[str, float]:
-        """
-        Wrapper for self.public_belief_states_former and also public_belief_states_latter
-        that returns them in a format that's more json-friendly.
-        Why?
-        Attempting a json.dumps on the public_belief_states causes a
-        'TypeError: keys must be str, int, float, bool or None, not RoleAllocationEnum' error message.
-        So I'm converting the keys to str instead.
-        :param latter: set this to true if you want the latter public belief states (from after the mission outcome
-        :return: dict with keys ["ab"] where a = index of spy 1, b = index of spy 2.
-        """
-        pbs: Dict[RoleAllocationEnum, float] = \
-            self.public_belief_states_latter if latter else self.public_belief_states_prior
-
-        jpbs: Dict[str, float] = {}
-
-        for kv in [*pbs.items()]:
-            jpbs[kv[0].to_string_for_json()] = kv[1]
-
-        return jpbs
-
-    @property
-    def json_dumpable_individual_beliefs(self) -> tuple[float, float, float, float, float]:
-        """
-        gets prior_predicted_spy_probabilities, but in a tuple of floats (based on player index)
-        :return: (p0 spy chance, p1 spy chance, p2 spy chance, p3 spy chance, p4 spy chance)
-        """
-        # noinspection PyTypeChecker
-        return tuple([p for p in [*self._prior_predicted_spy_probabilities.values()]])
-
-    def __str__(self):
-        """Formats this as a string, shamelessly lifted from the game.State class"""
-        output: str = "<TeamRecord\n"
-        for key in sorted(self.__dict__):
-            value = self.__dict__[key]
-            output += "\t- %s: %r\n" % (key, value)
-        output += "\t- %s: %r\n" % ("loggable_dict", self.loggable_dict)
-        pbs: Dict[RoleAllocationEnum, float] = self.public_belief_states_prior
-        output += "\t- %s: %r\n" % ("public_belief_dict", pbs)
-        output += "\t- %s: %r\n" % ("most_sus_pair", max([*pbs.items()], key=lambda kv: kv[1]))
-        output += "\t- %s: %r\n" % ("public_belief_dict_json", self.json_dumpable_public_belief_states())
-        return output + ">"
-
-    @property
-    def loggable_dict(self) -> Dict[
-        str,
-        Union[
-            Tuple[int, int, int, int, int],
-            Dict[str, float],
-            Tuple[float, float, float, float, float],
-            int
-        ]
-    ]:
-        """
-        Attempts to turn this into a dict that can be logged
-        :return: a dictionary with the following values:
-        * leader
-            * tuple of (leader index, leader suspicion)
-            * one-hot encoded tuple of 4 0s and one 1 (with the 1 being in leader[self.leader.index])
-        * beliefs_prior
-            * a dict of
-                * RoleAllocationEnum.to_string_for_json()
-                * float chance of each RoleAllocationEnum describing which team are spies,
-                calculated before this round's outcome
-                    * normalized so the sum of all chances = 1
-        * beliefs_latter
-            * Same as above, but using the updated predictions from after the end of the round.
-        * team
-            * one-hot encoded tuple, indicating which members were on the team (1 = member with that index on team)
-        * voted
-            * one-hot encoded tuple, indicating which team members voted for the team (1 = member with that index on team)
-        * sabotaged
-            * how many times the mission was sabotaged (0 if success, -1 if nomination failed)
-
-        """
-        #info_dict: Dict[str, Union[float, Tuple[int, float], Dict[int, float], int]] = {}
-
-        #prior_probs: List[float] = [*self._prior_predicted_spy_probabilities.values()]
-
-        #for i in range(0, len(prior_probs)):
-        #    info_dict["p{}".format(i)] = prior_probs[i]
-
-        info_dict: Dict[str, Union[
-            Tuple[int, int, int, int, int],
-            Dict[str, float],
-            Tuple[float, float, float, float, float],
-            int]
-        ] = {}
-
-        default_leader_array: List[int, int, int, int, int] = [0, 0, 0, 0, 0]
-        default_leader_array[self.leader.index] = 1
-
-        # noinspection PyTypeChecker
-        info_dict["leader"] = tuple(default_leader_array)
-
-        #info_dict["leader"] = (self.leader.index, self._prior_predicted_spy_probabilities[self.leader])
-
-        info_dict["beliefs_prior"] = self.json_dumpable_public_belief_states(False)
-
-        info_dict["beliefs_latter"] = self.json_dumpable_public_belief_states(True)
-
-        default_team_array: List[int, int, int, int, int] = [0, 0, 0, 0, 0]
-        for p in self.team:
-            default_team_array[p.index] = 1
-
-        # noinspection PyTypeChecker
-        info_dict["team"] = tuple(default_team_array)
-
-        default_voted_array: List[int, int, int, int, int] = [0, 0, 0, 0, 0]
-        for p in self.voted_for_team:
-            default_voted_array[p.index] = 1
-
-        # noinspection PyTypeChecker
-        info_dict["voted"] = tuple(default_voted_array)
-
-        #for p in self.team:
-        #    info_dict["team"][p.index] = info_dict["p{}".format(p.index)]
-        #{p: self._prior_predicted_spy_probabilities[p] for p in self.team}
-
-        info_dict["sabotaged"] = self._sabotages
-
-        # info_dict["players"] = self.json_dumpable_individual_beliefs
-
-        return info_dict
-
-
-
-class TempTeamRecord(object):
-    """
-    Like TeamRecord, but temporary.
-    All fields are mutable so they can be updated during the round.
-    Intended to be turned into a proper TeamRecord (with all the info in it) after the end of the round,
-    so it can be added to the history of team records.
-    """
-
-    def __init__(self):
-        self.team: Tuple[TPlayer, ...] = ()
-        self.leader: TPlayer = None
-        self.mission_number: int = 0
-        self.nomination_attempt: int = 0
-        self.nomination_successful: bool = False
-        self._sabotages: int = -1
-        self._voted_for_team: FrozenSet[TPlayer] = frozenset()
-        self.prior_player_spy_probabilities: Dict[TPlayer, float] = {}
-        self.latter_player_spy_probabilities: Dict[TPlayer, float] = {}
-
-    def reset_at_round_start(self, ldr: TPlayer, mis: int, nom: int) -> None:
-        """
-        Call this at the start of round. Resets data, allowing this round's data to be copied in.
-        :param ldr: current leader
-        :param mis: mission number
-        :param nom: nomination attempt
-        """
-        self.leader = ldr
-        self.mission_number = mis
-        self.nomination_attempt = nom
-
-        self.team = ()
-        self.nomination_successful = False
-        self._sabotages = -1
-        self._voted_for_team = ()
-
-    def add_team_info(self, team: Iterable[TPlayer], prior_spy_probs: Dict[TPlayer, float]) -> None:
-        """
-        Copy team info to this object when the team is revealed
-        :param team: the new team
-        """
-        self.team = tuple(team)
-        self.prior_player_spy_probabilities = prior_spy_probs.copy()
-
-    def add_vote_info(self, yes_men: Iterable[TPlayer], approved: bool) -> None:
-        """
-        Copies info about the vote to the team record
-        :param yes_men: players who voted in favour of it
-        :param approved: true if the vote passed
-        """
-        self._voted_for_team = frozenset(yes_men)
-        self.nomination_successful = approved
-
-    def add_mission_outcome_info(self, sab: int) -> None:
-        """
-        Adds the mission outcome info to the TeamRecord
-        :param sab: number of times this mission was sabotaged
-        """
-        self._sabotages = sab
-
-    def add_current_spy_probabilities(self, spy_probs_dict: Dict[TPlayer, float]) -> None:
-        """
-        Adds the current spy probabilities (worked out heuristically) to the team record info
-        :param spy_probs_dict: relative probability of each player being spy (individually)
-
-        :return: nothing
-        """
-        self.latter_player_spy_probabilities = spy_probs_dict.copy()
-        #self.player_spy_probabilities: Dict[TPlayer, float] = {}
-        #for p in [*spy_probs_dict.keys()]:
-        #    self.player_spy_probabilities[p] = spy_probs_dict[p]
-
-
-    @property
-    def generate_teamrecord_from_data(self) -> TeamRecord:
-        """
-        Puts the data in this TempTeamRecord into a proper TeamRecord so it can be saved for later
-        :return: a TeamRecord with the current data from this TempTeamRecord
-        """
-        return TeamRecord(self.team, self.leader, self.mission_number, self.nomination_attempt,
-                          self.nomination_successful, self._sabotages, self._voted_for_team,
-                          self.prior_player_spy_probabilities, self.latter_player_spy_probabilities)
-
-    @property
-    def sabotages(self) -> int:
-        """sabotage count (-1: nomination failed. 0: mission pass. 1+: mission fail)"""
-        return self._sabotages
-
-    @property
-    def voted_for_team(self) -> FrozenSet:
-        """who voted for the team?"""
-        return self._voted_for_team
 
 
 class GamestateTree(object):
@@ -761,7 +394,7 @@ class GamestateTree(object):
         """
         Indices for the final nomination attempts
         """
-        return [k for k in [*cls._node_dict.keys()] if cls._node_dict[k].hammer]
+        return [k for k in cls._node_dict.keys() if cls._node_dict[k].hammer]
 
     @classmethod
     def get_team_size_from_index(cls, ind: int) -> int:
@@ -874,6 +507,376 @@ class MCTSTree(object):
             self._mcts_tree[i] = MCTSTree.MCTSNode(i)
 
 
+
+class TeamRecord(object):
+    """
+    A record of the teams that have been nominated, who nominated them, whether or not the nomination passed,
+    the outcome of the mission, and who voted in favour of the team.
+
+    Properties are all read-only.
+    """
+
+    def __init__(self,
+                 team: Iterable[TPlayer],
+                 leader: TPlayer,
+                 mission_number: int,
+                 nomination_attempt: int,
+                 nomination_successful: bool,
+                 sabotages: int,
+                 voted_for_team: Iterable[TPlayer],
+                 prior_predicted_spy_probabilities: Dict[TPlayer, float],
+                 latter_predicted_spy_probabilities: Dict[TPlayer, float]
+                 ):
+        """
+        Constructor for this record of team information
+        :param team: who was on the team?
+        :param leader: who was the leader?
+        :param mission_number: which mission was this for?
+        :param nomination_attempt: which nomination attempt was this?
+        :param nomination_successful: did the nomination pass?
+        :param sabotages: how many times was the mission sabotaged?
+            (will be overwritten by -1 if nomination unsuccessful)
+        :param voted_for_team: who voted in favour of the team?
+        :param prior_predicted_spy_probabilities: predicted probabilities of each player being a spy,
+        as of the start of this turn
+        :param latter_predicted_spy_probabilities: predicted probabilities of each player being a spy,
+         as of the end of this turn.
+        """
+
+        self._team: Tuple[TPlayer, ...] = tuple(team)
+        self._leader: TPlayer = leader
+        self._mission_number: int = mission_number
+        self._nomination_attempt: int = nomination_attempt
+        self._nomination_successful: bool = nomination_successful
+        self._sabotages: int = sabotages if nomination_successful else -1
+        self._voted_for_team: FrozenSet[TPlayer] = frozenset(voted_for_team)
+        self._prior_predicted_spy_probabilities: Dict[TPlayer, float] = prior_predicted_spy_probabilities.copy()
+        self._latter_predicted_spy_probabilities: Dict[TPlayer, float] = latter_predicted_spy_probabilities.copy()
+        #self._predicted_spy_probabilities: Dict[TPlayer, float] = {}
+        #for p in [*predicted_spy_probabilities.keys()]:
+        #    self._predicted_spy_probabilities[p] = predicted_spy_probabilities[p]
+
+
+    @property
+    def team(self) -> Tuple[TPlayer, ...]:
+        """Who was on the team?"""
+        return self._team
+
+    @property
+    def leader(self) -> TPlayer:
+        """Who nominated the team?"""
+        return self._leader
+
+    @property
+    def mission_number(self) -> int:
+        """What mission was this for?"""
+        return self._mission_number
+
+    @property
+    def nomination_attempt(self) -> int:
+        """Which nomination was this?"""
+        return self._nomination_attempt
+
+    @property
+    def nomination_successful(self) -> bool:
+        """Did the nomination pass?"""
+        return self._nomination_successful
+
+    @property
+    def sabotages(self) -> int:
+        """How many times was the mission sabotaged? (-1 if it was rejected instead)"""
+        return self._sabotages
+
+    @property
+    def voted_for_team(self) -> FrozenSet[TPlayer]:
+        """Who voted in favour of the team?"""
+        return self._voted_for_team
+
+    @property
+    def prior_predicted_spy_probabilities(self) -> Dict[TPlayer, float]:
+        """What were the predicted probabilities of each player on the team being a spy?"""
+        return self._prior_predicted_spy_probabilities.copy()
+
+    @property
+    def latter_predicted_spy_probabilities(self) -> Dict[TPlayer, float]:
+        """What were the predicted probabilities of each player on the team being a spy?"""
+        return self._latter_predicted_spy_probabilities.copy()
+
+    @property
+    def public_belief_states_prior(self) -> Dict[RoleAllocationEnum, float]:
+        """Public belief states(?) for this gamestate (before the outcome of this mission attempt)."""
+
+        player_kv: List[Tuple[TPlayer, float]] = [*self._prior_predicted_spy_probabilities.items()]
+
+        public_state_dict: Dict[RoleAllocationEnum, float] = {}
+
+        for rp in RoleAllocationEnum.__members__.values():
+            chance_of_this_allocation: float = 1
+            rp_list = rp.get_value()
+            for r in range(0, len(rp_list)):
+                if rp_list[r]:
+                    chance_of_this_allocation *= player_kv[r][1]
+                else:
+                    chance_of_this_allocation *= (1 - player_kv[r][1])
+            public_state_dict[rp] = chance_of_this_allocation
+
+        total_chances: float = sum(public_state_dict.values())
+
+        if total_chances == 0:
+            total_chances = 1
+
+        for k in public_state_dict.keys():
+            public_state_dict[k] /= total_chances  # sum of hypotheses = 1 (hopefully)
+
+        return public_state_dict
+
+    @property
+    def public_belief_states_latter(self) -> Dict[RoleAllocationEnum, float]:
+        """Public belief states(?) for this gamestate (after the outcome of this mission attempt)."""
+
+        player_kv: List[Tuple[TPlayer, float]] = [*self._latter_predicted_spy_probabilities.items()]
+
+        public_state_dict: Dict[RoleAllocationEnum, float] = {}
+
+        for rp in RoleAllocationEnum.__members__.values():
+            chance_of_this_allocation: float = 1
+            rp_list = rp.get_value()
+            for r in range(0, len(rp_list)):
+                if rp_list[r]:
+                    chance_of_this_allocation *= player_kv[r][1]
+                else:
+                    chance_of_this_allocation *= (1 - player_kv[r][1])
+            public_state_dict[rp] = chance_of_this_allocation
+
+        total_chances: float = sum(public_state_dict.values())
+
+        if total_chances == 0:
+            total_chances = 1
+
+        for k in public_state_dict.keys():
+            public_state_dict[k] /= total_chances  # sum of hypotheses = 1 (hopefully)
+
+        return public_state_dict
+
+
+    def json_dumpable_public_belief_states(self, latter: bool = False) -> Dict[str, float]:
+        """
+        Wrapper for self.public_belief_states_former and also public_belief_states_latter
+        that returns them in a format that's more json-friendly.
+        Why?
+        Attempting a json.dumps on the public_belief_states causes a
+        'TypeError: keys must be str, int, float, bool or None, not RoleAllocationEnum' error message.
+        So I'm converting the keys to str instead.
+        :param latter: set this to true if you want the latter public belief states (from after the mission outcome
+        :return: dict with keys ["ab"] where a = index of spy 1, b = index of spy 2.
+        """
+        pbs: Dict[RoleAllocationEnum, float] = \
+            self.public_belief_states_latter if latter else self.public_belief_states_prior
+
+        jpbs: Dict[str, float] = {}
+
+        for kv in pbs.items():
+            jpbs[kv[0].to_string_for_json()] = kv[1]
+
+        return jpbs
+
+    @property
+    def json_dumpable_individual_beliefs(self) -> tuple[float, float, float, float, float]:
+        """
+        gets prior_predicted_spy_probabilities, but in a tuple of floats (based on player index)
+        :return: (p0 spy chance, p1 spy chance, p2 spy chance, p3 spy chance, p4 spy chance)
+        """
+        # noinspection PyTypeChecker
+        return tuple([p for p in self._prior_predicted_spy_probabilities.values()])
+
+    def __str__(self):
+        """Formats this as a string, shamelessly lifted from the game.State class"""
+        output: str = "<TeamRecord\n"
+        for key in sorted(self.__dict__):
+            value = self.__dict__[key]
+            output += "\t- %s: %r\n" % (key, value)
+        output += "\t- %s: %r\n" % ("loggable_dict", self.loggable_dict)
+        pbs: Dict[RoleAllocationEnum, float] = self.public_belief_states_prior
+        output += "\t- %s: %r\n" % ("public_belief_dict", pbs)
+        output += "\t- %s: %r\n" % ("most_sus_pair", max(pbs.items(), key=lambda kv: kv[1]))
+        output += "\t- %s: %r\n" % ("public_belief_dict_json", self.json_dumpable_public_belief_states())
+        return output + ">"
+
+    @property
+    def loggable_dict(self) -> Dict[
+        str,
+        Union[
+            Tuple[int, int, int, int, int],
+            Dict[str, float],
+            Tuple[float, float, float, float, float],
+            int
+        ]
+    ]:
+        """
+        Attempts to turn this into a dict that can be logged
+        :return: a dictionary with the following values:
+        * leader
+            * tuple of (leader index, leader suspicion)
+            * one-hot encoded tuple of 4 0s and one 1 (with the 1 being in leader[self.leader.index])
+        * beliefs_prior
+            * a dict of
+                * RoleAllocationEnum.to_string_for_json()
+                * float chance of each RoleAllocationEnum describing which team are spies,
+                calculated before this round's outcome
+                    * normalized so the sum of all chances = 1
+        * beliefs_latter
+            * Same as above, but using the updated predictions from after the end of the round.
+        * team
+            * one-hot encoded tuple, indicating which members were on the team (1 = member with that index on team)
+        * voted
+            * one-hot encoded tuple, indicating which team members voted for the team (1 = member with that index on team)
+        * sabotaged
+            * how many times the mission was sabotaged (0 if success, -1 if nomination failed)
+
+        """
+        #info_dict: Dict[str, Union[float, Tuple[int, float], Dict[int, float], int]] = {}
+
+        #prior_probs: List[float] = [*self._prior_predicted_spy_probabilities.values()]
+
+        #for i in range(0, len(prior_probs)):
+        #    info_dict["p{}".format(i)] = prior_probs[i]
+
+        info_dict: Dict[str, Union[
+            Tuple[int, int, int, int, int],
+            Dict[str, float],
+            Tuple[float, float, float, float, float],
+            int]
+        ] = {}
+
+        default_leader_array: List[int, int, int, int, int] = [0, 0, 0, 0, 0]
+        default_leader_array[self.leader.index] = 1
+
+        # noinspection PyTypeChecker
+        info_dict["leader"] = tuple(default_leader_array)
+
+        #info_dict["leader"] = (self.leader.index, self._prior_predicted_spy_probabilities[self.leader])
+
+        info_dict["beliefs_prior"] = self.json_dumpable_public_belief_states(False)
+
+        info_dict["beliefs_latter"] = self.json_dumpable_public_belief_states(True)
+
+        default_team_array: List[int, int, int, int, int] = [0, 0, 0, 0, 0]
+        for p in self.team:
+            default_team_array[p.index] = 1
+
+        # noinspection PyTypeChecker
+        info_dict["team"] = tuple(default_team_array)
+
+        default_voted_array: List[int, int, int, int, int] = [0, 0, 0, 0, 0]
+        for p in self.voted_for_team:
+            default_voted_array[p.index] = 1
+
+        # noinspection PyTypeChecker
+        info_dict["voted"] = tuple(default_voted_array)
+
+        #for p in self.team:
+        #    info_dict["team"][p.index] = info_dict["p{}".format(p.index)]
+        #{p: self._prior_predicted_spy_probabilities[p] for p in self.team}
+
+        info_dict["sabotaged"] = self._sabotages
+
+        # info_dict["players"] = self.json_dumpable_individual_beliefs
+
+        return info_dict
+
+
+
+class TempTeamRecord(object):
+    """
+    Like TeamRecord, but temporary.
+    All fields are mutable so they can be updated during the round.
+    Intended to be turned into a proper TeamRecord (with all the info in it) after the end of the round,
+    so it can be added to the history of team records.
+    """
+
+    def __init__(self):
+        self.team: Tuple[TPlayer, ...] = ()
+        self.leader: TPlayer = None
+        self.mission_number: int = 0
+        self.nomination_attempt: int = 0
+        self.nomination_successful: bool = False
+        self._sabotages: int = -1
+        self._voted_for_team: FrozenSet[TPlayer] = frozenset()
+        self.prior_player_spy_probabilities: Dict[TPlayer, float] = {}
+        self.latter_player_spy_probabilities: Dict[TPlayer, float] = {}
+
+    def reset_at_round_start(self, ldr: TPlayer, mis: int, nom: int) -> None:
+        """
+        Call this at the start of round. Resets data, allowing this round's data to be copied in.
+        :param ldr: current leader
+        :param mis: mission number
+        :param nom: nomination attempt
+        """
+        self.leader = ldr
+        self.mission_number = mis
+        self.nomination_attempt = nom
+
+        self.team = ()
+        self.nomination_successful = False
+        self._sabotages = -1
+        self._voted_for_team = ()
+
+    def add_team_info(self, team: Iterable[TPlayer], prior_spy_probs: Dict[TPlayer, float]) -> None:
+        """
+        Copy team info to this object when the team is revealed
+        :param team: the new team
+        """
+        self.team = tuple(team)
+        self.prior_player_spy_probabilities = prior_spy_probs.copy()
+
+    def add_vote_info(self, yes_men: Iterable[TPlayer], approved: bool) -> None:
+        """
+        Copies info about the vote to the team record
+        :param yes_men: players who voted in favour of it
+        :param approved: true if the vote passed
+        """
+        self._voted_for_team = frozenset(yes_men)
+        self.nomination_successful = approved
+
+    def add_mission_outcome_info(self, sab: int) -> None:
+        """
+        Adds the mission outcome info to the TeamRecord
+        :param sab: number of times this mission was sabotaged
+        """
+        self._sabotages = sab
+
+    def add_current_spy_probabilities(self, spy_probs_dict: Dict[TPlayer, float]) -> None:
+        """
+        Adds the current spy probabilities (worked out heuristically) to the team record info
+        :param spy_probs_dict: relative probability of each player being spy (individually)
+
+        :return: nothing
+        """
+        self.latter_player_spy_probabilities = spy_probs_dict.copy()
+        #self.player_spy_probabilities: Dict[TPlayer, float] = {}
+        #for p in [*spy_probs_dict.keys()]:
+        #    self.player_spy_probabilities[p] = spy_probs_dict[p]
+
+
+    @property
+    def generate_teamrecord_from_data(self) -> TeamRecord:
+        """
+        Puts the data in this TempTeamRecord into a proper TeamRecord so it can be saved for later
+        :return: a TeamRecord with the current data from this TempTeamRecord
+        """
+        return TeamRecord(self.team, self.leader, self.mission_number, self.nomination_attempt,
+                          self.nomination_successful, self._sabotages, self._voted_for_team,
+                          self.prior_player_spy_probabilities, self.latter_player_spy_probabilities)
+
+    @property
+    def sabotages(self) -> int:
+        """sabotage count (-1: nomination failed. 0: mission pass. 1+: mission fail)"""
+        return self._sabotages
+
+    @property
+    def voted_for_team(self) -> FrozenSet:
+        """who voted for the team?"""
+        return self._voted_for_team
 
 
 
@@ -1218,7 +1221,7 @@ class PlayerRecord(object):
         #print(all_prior_rounds)
 
         if len(all_prior_rounds) == 0:
-            return 0.25  # 0.5 suspicion if no data
+            return 0.25  # 0.25 suspicion if no data
 
         if len([h for h in self.hammers_thrown if h in all_prior_rounds]) > 0:
             return 1  # only a spy would throw a hammer vote.
@@ -1280,6 +1283,13 @@ class SpySabotageChanceStats(object):
         """
         An inner class that keeps a record of the stats for a specific spy.
         """
+
+        COUNT: str = "count"
+        SABOTAGED: str = "sabotaged"
+        LEADER: str = "leader"
+        NOT_LEADER: str = "not leader"
+        AWKWARD: str = "awkward"
+
         def __init__(self, name: str):
             """
             Constructor. Records what this spy is called, and starts recording some stats.
@@ -1292,8 +1302,8 @@ class SpySabotageChanceStats(object):
             self._lead_missions_at_gamestates: Dict[int, Dict[str, int]] = dict.fromkeys(
                 ntgi,
                 {
-                    "count": 0,
-                    "sabotaged": 0,
+                    SpySabotageChanceStats.IndividualSpySabStats.COUNT: 0,
+                    SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED: 0,
                 }
             )
             """
@@ -1305,8 +1315,8 @@ class SpySabotageChanceStats(object):
             self._been_on_missions_at_gamestates: Dict[int, Dict[str, int]] = dict.fromkeys(
                 ntgi,
                 {
-                    "count": 0,
-                    "sabotaged": 0,
+                    SpySabotageChanceStats.IndividualSpySabStats.COUNT: 0,
+                    SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED: 0,
                 }
             )
             """
@@ -1315,12 +1325,23 @@ class SpySabotageChanceStats(object):
             and how many times it sabotaged aforementioned missions.
             """
 
-            self._missions_with_other_spy_at_gamestates: Dict[int, Dict[str, List[int]]] = dict.fromkeys(
+            self._missions_with_other_spy_at_gamestates: Dict[
+                int, Dict[str, Dict[str, Union[int, float]]]
+            ] = dict.fromkeys(
                 ntgi,
                 {
-                    "leader": [],
-                    "accomplice": [],
-                    "idiot": [],
+                    SpySabotageChanceStats.IndividualSpySabStats.LEADER: {  # sabotages when this spy is leading
+                        SpySabotageChanceStats.IndividualSpySabStats.COUNT: 0,
+                        SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED: 0
+                    },
+                    SpySabotageChanceStats.IndividualSpySabStats.NOT_LEADER: {  # sabotages when other spy is leading
+                        SpySabotageChanceStats.IndividualSpySabStats.COUNT: 0,
+                        SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED: 0
+                    },
+                    SpySabotageChanceStats.IndividualSpySabStats.AWKWARD: {  # sabotages when not spy is leading
+                        SpySabotageChanceStats.IndividualSpySabStats.COUNT: 0,
+                        SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED: 0
+                    }
                 }
             )
             """
@@ -1330,45 +1351,392 @@ class SpySabotageChanceStats(object):
             [i]["accomplice"] is a list of the sabotage counts for every two-spy missions that the other spy lead
             [i]["idiot"] is a list of sabotage counts for every two-spy missions lead by a resistance member.
             """
-
-        def add_data_from_game(self, spy_info_tuples: List[Tuple[Tuple[int, int, int, bool], bool, bool]]) -> None:
+            self._the_general_case: Dict[str, Dict[str, Union[int, Dict[str, float]]]] = {
+                SpySabotageChanceStats.IndividualSpySabStats.LEADER: {
+                    SpySabotageChanceStats.IndividualSpySabStats.COUNT: 0,
+                    SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED: 0
+                },
+                SpySabotageChanceStats.IndividualSpySabStats.NOT_LEADER: {
+                    SpySabotageChanceStats.IndividualSpySabStats.COUNT: 0,
+                    SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED: 0
+                },
+                SpySabotageChanceStats.IndividualSpySabStats.AWKWARD: {
+                    SpySabotageChanceStats.IndividualSpySabStats.LEADER: {
+                        SpySabotageChanceStats.IndividualSpySabStats.COUNT: 0,
+                        SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED: 0
+                    },
+                    SpySabotageChanceStats.IndividualSpySabStats.NOT_LEADER: {
+                        SpySabotageChanceStats.IndividualSpySabStats.COUNT: 0,
+                        SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED: 0
+                    },
+                    SpySabotageChanceStats.IndividualSpySabStats.AWKWARD: {
+                        SpySabotageChanceStats.IndividualSpySabStats.COUNT: 0,
+                        SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED: 0
+                    }
+                }
+            }
+            """
+            And the general case (aggregate for all gamestates).
+            Single spy goes in the leader/not leader counts.
+            Multiple spies goes in the awkward sub-dictionary
             """
 
-            :param spy_info_tuples: ((mission id, sabotage count, team size, isLeader), multipleSpies, leadByOtherSpy)
+        def _add_info_for_multiple_spies(self, sab_count: float, gs_id: int, condition: str) -> None:
+            """
+            Adds info to the dictionaries for when there are multiple spies
+            :param sab_count: sabotage count (after being divided by 2)
+            :param gs_id: id for the gamestate
+            :param condition: either LEADER, NOT_LEADER, or AWKWARD
+            """
+
+            self._missions_with_other_spy_at_gamestates[gs_id][condition]\
+                [SpySabotageChanceStats.IndividualSpySabStats.COUNT] += 1
+            self._missions_with_other_spy_at_gamestates[gs_id][condition]\
+                [SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED] += sab_count
+
+            self._the_general_case[SpySabotageChanceStats.IndividualSpySabStats.AWKWARD][condition]\
+                [SpySabotageChanceStats.IndividualSpySabStats.COUNT] += 1
+            self._the_general_case[SpySabotageChanceStats.IndividualSpySabStats.AWKWARD][condition] \
+                [SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED] += sab_count
+
+        def _add_info_for_general_case_one_spy(self, sab: int, condition: str) -> None:
+            """
+            Adds info for the general case for when there's only one spy
+            :param sab: sabotage count
+            :param condition: leader/not leader
+            """
+            self._the_general_case[condition][SpySabotageChanceStats.IndividualSpySabStats.COUNT] += 1
+            self._the_general_case[condition][SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED] += sab
+
+        def add_data_from_game(self, spy_info_tuples: List[Tuple[int, int, bool, bool, bool]]) -> None:
+            """
+            Adds the data about the spies for the given game to the
+            :param spy_info_tuples: (mission id, sabotage count, isLeader, multipleSpies, leadByOtherSpy)
             """
 
             for t in spy_info_tuples:
-                gs_id: int = t[0][0]
-                sab_count: int = t[0][1]
-                if t[1]:  # if multiple spies
-                    if t[2]: # if lead by non-spy
-                        self._missions_with_other_spy_at_gamestates[gs_id]["idiot"].append(sab_count)
-                    else:
-                        if t[0][3]: # if lead by this spy
-                            self._missions_with_other_spy_at_gamestates[gs_id]["leader"].append(sab_count)
-                        else: # if the other spy lead it
-                            self._missions_with_other_spy_at_gamestates[gs_id]["accomplice"].append(sab_count)
-                    continue
-                elif t[0][3]: # if lead by this spy
-                    self._lead_missions_at_gamestates[gs_id]["count"] += 1
-                    self._lead_missions_at_gamestates[gs_id]["sabotaged"] += sab_count
-                else:
-                    self._been_on_missions_at_gamestates[gs_id]["count"] += 1
-                    self._been_on_missions_at_gamestates[gs_id]["sabotaged"] += sab_count
+                gs_id: int = t[0]
+                sab_count: int = t[1]
+                if t[3]:  # if multiple spies
+                    f_sabs: float = sab_count/2
+                    if t[2]:  # if lead by self
+                        self._add_info_for_multiple_spies(
+                            f_sabs, gs_id, SpySabotageChanceStats.IndividualSpySabStats.LEADER
+                        )
+                    elif t[4]:  # if lead by other spy
+                        self._add_info_for_multiple_spies(
+                            f_sabs, gs_id, SpySabotageChanceStats.IndividualSpySabStats.NOT_LEADER
+                        )
+                    else:  # if lead by non-spy
+                        self._add_info_for_multiple_spies(
+                            f_sabs, gs_id, SpySabotageChanceStats.IndividualSpySabStats.AWKWARD
+                        )
+                elif t[2]:  # if lead by this spy
+                    self._lead_missions_at_gamestates[gs_id][SpySabotageChanceStats.IndividualSpySabStats.COUNT] += 1
+                    self._lead_missions_at_gamestates[gs_id][SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED]\
+                        += sab_count
+                    self._add_info_for_general_case_one_spy(
+                        sab_count, SpySabotageChanceStats.IndividualSpySabStats.LEADER
+                    )
+                else:  # if lead by non-spy
+                    self._been_on_missions_at_gamestates[gs_id][SpySabotageChanceStats.IndividualSpySabStats.COUNT] += 1
+                    self._been_on_missions_at_gamestates[gs_id][SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED]\
+                        += sab_count
+                    self._add_info_for_general_case_one_spy(
+                        sab_count, SpySabotageChanceStats.IndividualSpySabStats.NOT_LEADER
+                    )
 
-        def placeholder(self):
-            # TODO: methods to get the stats of how likely this agent is to sabotage.
-            pass
+        def _multiple_spy_probability(self, gs: int, condition: str) -> float:
+            """
+            Obtains probability from multiple spies for the given gamestate, or for the general case,
+            with the given condition
+            :param gs: gamestate ID
+            :param condition: leader/not_leader/awkward
+            :return: probability of this spy sabotaging in that gamestate, or in the general case, or -1 if no
+            general case examples found
+            """
+            count_a: int = self._missions_with_other_spy_at_gamestates[gs][condition]\
+                [SpySabotageChanceStats.IndividualSpySabStats.COUNT]
+            if count_a > 0:
+                return self._missions_with_other_spy_at_gamestates[gs][condition]\
+                           [SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED] / count_a
+
+            gc_count: float = self._the_general_case[SpySabotageChanceStats.IndividualSpySabStats.AWKWARD][condition]\
+                [SpySabotageChanceStats.IndividualSpySabStats.COUNT]
+            if gc_count > 0:
+                return self._the_general_case[SpySabotageChanceStats.IndividualSpySabStats.AWKWARD][condition]\
+                [SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED] / gc_count
+            else:
+                return -1
+
+        def _single_spy_general_case_probability(self, condition: str) -> float:
+            """
+            Obtains probability from general case for a single spy under the given condition
+            :param condition: leader/not_leader
+            :return: probability of this spy sabotaging under that condition in the general case, or -1 if no
+            general case examples found
+            """
+            gc_count: int = self._the_general_case[condition][SpySabotageChanceStats.IndividualSpySabStats.COUNT]
+            if gc_count > 0:
+                return self._the_general_case[condition][SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED] / \
+                       gc_count
+            else:
+                return -1
+
+        def get_sabotage_chance(self, gs: int, is_leader: bool, multiple_spies: bool, leader_is_spy: bool):
+            """
+            Attempts to get the likelihood of this spy sabotaging stuff in this situation at the given gamestate.
+            Returns -1 if no data can be found for that gamestate.
+            :param gs: the current gamestate
+            :param is_leader: is this spy the leader?
+            :param multiple_spies: are there multiple spies on the team?
+            :param leader_is_spy: is the spy a leader (if there are multiple spies)?
+            :return: probability (0-1) of the spy sabotaging stuff in this situation at the given gamestate.
+            If no data for that particular situation at the gamestate could be found, returns the probability
+            for the general case at that gamestate.
+            If no data could be found for the general case at this gamestate, returns -1.
+            """
+            if multiple_spies:
+                # For cases where there are multiple spies, we divide the sum of sabotage counts for that situation by
+                # twice the length of the list of sabotages for that situation, because individual sab counts can
+                # be either 0, 1, or 2, and we need a result between 0-1.
+                if is_leader:
+                    return self._multiple_spy_probability(gs, SpySabotageChanceStats.IndividualSpySabStats.LEADER)
+                elif leader_is_spy:
+                    return self._multiple_spy_probability(gs, SpySabotageChanceStats.IndividualSpySabStats.NOT_LEADER)
+                else:
+                    return self._multiple_spy_probability(gs, SpySabotageChanceStats.IndividualSpySabStats.AWKWARD)
+            elif is_leader:
+                lead_count: int = self._lead_missions_at_gamestates[gs]\
+                                        [SpySabotageChanceStats.IndividualSpySabStats.COUNT]
+                if lead_count > 0:
+                    return self._lead_missions_at_gamestates[gs]\
+                               [SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED] / lead_count
+                else:
+                    return self._single_spy_general_case_probability(SpySabotageChanceStats.IndividualSpySabStats.LEADER)
+            else:
+                not_lead_count: int = self._been_on_missions_at_gamestates[gs]\
+                    [SpySabotageChanceStats.IndividualSpySabStats.COUNT]
+                if not_lead_count > 0:
+                    return self._been_on_missions_at_gamestates[gs]\
+                               [SpySabotageChanceStats.IndividualSpySabStats.SABOTAGED] / not_lead_count
+                else:
+                    return self._single_spy_general_case_probability(
+                        SpySabotageChanceStats.IndividualSpySabStats.NOT_LEADER
+                    )
 
     def __init__(self):
         # TODO: set this up, dictionary of spy stat objects, and one dummy stat object as an aggregate for agents without
         #  any of their own data
         # TODO: how likely is a given spy to sabotage?
+        self._default_stats: "SpySabotageChanceStats.IndividualSpySabStats" =\
+            SpySabotageChanceStats.IndividualSpySabStats("default")
+        """A stats object for a generic spy (aggregate for every spy ever)"""
+
+        self._player_stats: Dict[str, "SpySabotageChanceStats.IndividualSpySabStats"] = {}
+        """A dictionary to keep the stats for every spy encountered in this play session.
+        This is only being stored in RAM instead of being stored on disk/used in some neural stuff,
+        because, over time, there might be a lot of spies, who may have non-unique names,
+        and that could get out of hand pretty quickly, y'know?"""
+
         pass
 
+    def add_sabotage_info(self, sabotage_info_dict: Dict[str, List[Tuple[int, int, bool, bool, bool]]]) -> None:
+        """
+        Adds the sabotage info from a gamerecord to the sabotage info stats for the specified spies (and the
+        generic spy)
+        :param sabotage_info_dict: the dictionary returned from the GameRecord's
+        get_info_about_sabotages_from_spies_for_sabotage_records method
+        :return: nothing
+        """
+        for kv in sabotage_info_dict.items():
+
+            if kv[0] not in self._player_stats:
+                self._player_stats[kv[0]] = SpySabotageChanceStats.IndividualSpySabStats(kv[0])
+            self._player_stats[kv[0]].add_data_from_game(kv[1])
+            self._default_stats.add_data_from_game(kv[1])
+        pass
+
+    def get_sabotage_chance(
+            self,
+            spy_name: str,
+            gs: int,
+            is_leader: bool,
+            multiple_spies: bool,
+            leader_is_spy: bool
+    ) -> float:
+        """
+        Attempts to work out how likely this spy is to sabotage, from all the spy sabotage info we have so far.
+        :param spy_name: the name of this spy.
+        :param gs: id of the current gamestate
+        :param is_leader: is this spy leading the team?
+        :param multiple_spies: are there multiple spies on the team?
+        :param leader_is_spy: is the leader of this team a spy?
+        :return: the probability of this spy attempting to sabotage in this situation, from prior observations.
+        """
+        # if we have data for this spy, we attempt to get data from their stats object
+        if spy_name in self._player_stats:
+            individual_probs: float = self._player_stats[spy_name].get_sabotage_chance(
+                gs, is_leader, multiple_spies,leader_is_spy
+            )
+            if individual_probs != -1:
+                return individual_probs
+
+        # if we don't have data for that spy, or if their data returns -1, we get data for the general case instead.
+        general_probs: float = self._default_stats.get_sabotage_chance(
+            gs, is_leader, multiple_spies, leader_is_spy
+        )
+        if general_probs == -1:  # if we get nothing for the general case, we give up and return 0.5
+            return 0.5
+        else:
+            return general_probs  # otherwise we return what we got for the general case.
 
 
+class GameRecord(object):
+    """
+    A class used to hold data about an entire game,
+    before getting it in JSON loggable form,
+    also making it easier to update the SpySabotageChanceStats object
+    after the end of the game.
+    """
 
+    def __init__(self):
+        self._team_records: Dict[int, TeamRecord] = {}
+        """
+        A record of what teams have been nominated so far,
+        who nominated the team,
+        the results of those votes (who voted in favour of it),
+        and what the outcomes of those missions were (if nomination succeeded).
+        Key values correspond to the index of the relevant GamestateTree node in the GamestateTree object.
+        The python specification states that dict.keys() is ALWAYS ordered by insertion order, so this also
+        keeps track of a gamestate history, which is nice as well.
+        """
+
+    def add_teamrecord_to_records(self, gs: int, tr: TeamRecord) -> None:
+        """
+        Adds the given teamrecord to this gamerecord at the given gamestate.
+        :param gs: the id of the gamestate (gamestatetree ID)
+        :param tr: the actual teamrecord for that gamestate
+        :return: nothing.
+        """
+        self._team_records[gs] = tr
+
+    def reset(self) -> None:
+        """
+        Clears everything from team_records, so we can start a new game.
+        :return:
+        """
+        self._team_records.clear()
+
+    @property
+    def json_loggable_teamrecords(self) -> Dict[
+        int,
+        Union[
+            Tuple[int, int, int, int, int],
+            Dict[str, float],
+            Tuple[float, float, float, float, float],
+            int
+        ]
+    ]:
+        """
+        Returns a dictionary of the loggable teamrecord dicts,
+        for use when logging json stuff
+        :return: a dictionary of all the loggabledicts of all the teamrecords
+        """
+        log_dict: Dict[
+            int,
+            Union[
+                Tuple[int, int, int, int, int],
+                Dict[str, float],
+                Tuple[float, float, float, float, float],
+                int
+            ]
+        ] = {}
+        for kv in self._team_records.items():
+            log_dict[kv[0]] = kv[1].loggable_dict
+
+        return log_dict
+
+    def get_info_about_sabotages_from_spies_for_sabotage_records(self,
+         the_spies: List[TPlayer],
+         me: TPlayer,
+         im_spy: bool,
+         my_known_sabs: List[int]
+    ) -> Dict[
+        str, List[Tuple[int, int, bool, bool, bool]]
+    ]:
+        """
+        Obtains info about spy sabotages from the gamerecords, for use in the spysabotagerecords
+        :param the_spies: A tuple of who the spies were.
+        :param me: the player who is calling this
+        :param im_spy: if the player who is calling this is a spy
+        :param my_known_sabs: If caller was a spy, this holds the list of all the missions that they definitely did
+        sabotage, so, for missions where both spies were present, this allows us to see exactly how many times
+        the other spy sabotaged it.
+        :return: A dictionary of [spy name, list(mission id, sabotage count, isLeader, multipleSpies, leadBySpy)]
+        for both of those spies,
+        which can be easily fed to a SpySabotageChances object.
+        """
+        spy1_name: str = the_spies[0].name
+        spy2_name: str = the_spies[1].name
+        info_dict: Dict[str, List[Tuple[int, int, bool, bool, bool]]] = {
+            spy1_name: [],
+            spy2_name: []
+        }
+        im_spy1: bool = im_spy and me == the_spies[0]
+        im_spy2: bool = im_spy and not im_spy1
+
+        missions_that_happened: List[Tuple[int, TeamRecord]] = [kv for kv in self._team_records.items() if
+                                                                kv[1].sabotages != -1]
+        for m in missions_that_happened:
+
+            tr: TeamRecord = m[1]
+
+            team: Tuple[TPlayer] = tr.team
+            spy_1_on_team: bool = the_spies[0] in team
+            spy_2_on_team: bool = the_spies[1] in team
+
+            if spy_1_on_team or spy_2_on_team:
+                leader_is_spy: bool = tr.leader in the_spies
+                spy_1_is_leader: bool = leader_is_spy and tr.leader == the_spies[0]
+                spy_2_is_leader: bool = leader_is_spy and not spy_1_is_leader
+                multiple_spies: bool = spy_1_on_team and spy_2_on_team
+                sabs1: int = tr.sabotages
+                sabs2: int = sabs1
+                if im_spy and multiple_spies and sabs1 == 1:
+                    # if there were multiple spies, but only one sabotage, and I'm a spy
+                    if im_spy1 ^ m[0] in my_known_sabs:
+                        # If I either did it as spy 2, or didn't do it as spy 1,
+                        # we know that spy 1 definitely didn't do it, and that
+                        # spy 2 definitely did, so we consider spy 2 to have sabotaged
+                        # it twice, whilst spy 1 didn't sabotage it at all.
+                        sabs1 = 0
+                        sabs2 = 2
+                    else:  # and vice versa.
+                        sabs1 = 2
+                        sabs2 = 0
+
+                if spy_1_on_team:
+                    info_dict[spy1_name].append(
+                        (m[0], sabs1, spy_1_is_leader, multiple_spies, leader_is_spy)
+                    )
+                if spy_2_on_team:
+                    info_dict[spy2_name].append(
+                        (m[0], sabs2, spy_2_is_leader, multiple_spies, leader_is_spy)
+                    )
+
+        return info_dict
+
+
+class NeuralNetworker(object):
+    """
+    A class that loads and holds all of the neural networks used by this bot,
+    as well as providing wrappers for using the neural networks.
+    """
+
+    def __init__(self):
+        # TODO: methods to load the neural networks
+        pass
 
 
 class rl18730(Bot):
@@ -1378,6 +1746,20 @@ class rl18730(Bot):
     note: currently not functional.
     """
 
+    _sabotage_chance_stats: SpySabotageChanceStats = SpySabotageChanceStats()
+    """
+    This is a SpySabotageChanceStats object, to keep track of the sabotage chances for every single spy
+    that we encounter.
+    
+    This is being done as a static attribute belonging to the class itself, instead of being initialized in init,
+    because this framework appears to create a new instance of this bot whenever it's being included in a game,
+    so, if this object only belonged to an instance of this class, it would be reset every single game,
+    making it incredibly useless. So it's here instead.
+    """
+    if os.path.exists(resources_file_path / "sabotages.p"):
+        with open(resources_file_path / "sabotages.p", "rb") as p:
+            _sabotage_chance_stats: SpySabotageChanceStats = pickle.load(p)
+            p.close()
 
     def __init__(self, game: State, index: int, spy: bool):
         """Constructor called before a game starts.  It's recommended you don't
@@ -1405,6 +1787,11 @@ class rl18730(Bot):
 
         self.current_gamestate: int = 0
         """Will hold the index of the current gamestate (via GamestateTree)"""
+
+        self.game_record: GameRecord = GameRecord()
+        """
+        A record of the info for this game.
+        """
 
         self.team_records: Dict[int, TeamRecord] = {}
         """
@@ -1450,6 +1837,18 @@ class rl18730(Bot):
         The role combos that don't include this agent.
         """
 
+        self.missions_that_i_sabotaged: List[int] = []
+        """
+        If I'm a spy, this is the list of missions that I sabotaged.
+        """
+
+        # noinspection PyTypeChecker
+        self.other_spy: TPlayer = None
+        """
+        If I'm a spy, this is who the other spy is. If there is no other spy (because we're not a spy), this is None.
+        """
+
+
     def onGameRevealed(self, players: List[TPlayer], spies: List[TPlayer]) -> None:
         """This function will be called to list all the players, and if you're
         a spy, the spies too -- including others and yourself.
@@ -1459,6 +1858,10 @@ class rl18730(Bot):
 
         self.temp_team_record = TempTeamRecord()
 
+        self.game_record.reset()
+
+        self.missions_that_i_sabotaged.clear()
+
         self.player_records.clear()
         for p in players:
             self.player_records[p] = PlayerRecord(p)
@@ -1467,7 +1870,11 @@ class rl18730(Bot):
             self.spies = spies
             # take note of the spies if we are a spy
             for p in players:
-                self.player_records[p].identity_is_known(p in spies)
+                is_spy: bool = p in spies
+                self.player_records[p].identity_is_known(is_spy)
+                if is_spy and p != self:
+                    # we take note of who the other spy is.
+                    self.other_spy = p
 
         self.role_combos_that_im_in = tuple(
             [t for t in RoleAllocationEnum.__members__.values() if self in t.extract_sublist_from(players)]
@@ -1508,7 +1915,22 @@ class rl18730(Bot):
         pass
 
     def select(self, players: List[TPlayer], count: int) -> List[TPlayer]:
-        """Pick a sub-group of players to go on the next mission.
+        """
+        Pick a sub-group of players to go on the next mission.
+
+        Actually just a wrapper for self._select(players, count), but it shuffles the
+        result of that, for the sole purpose of fucking around with any other bots that
+        have logic that depends on the ordering of players within a team.
+
+        :param players:  The list of all players in the game to pick from.
+        :param count:    The number of players you must now select.
+        :return: list    The players selected for the upcoming mission.
+        """
+        return random.sample(self._select(players, count), count)
+
+    def _select(self, players: List[TPlayer], count: int) -> List[TPlayer]:
+        """
+        Pick a sub-group of players to go on the next mission.
         :param players:  The list of all players in the game to pick from.
         :param count:    The number of players you must now select.
         :return: list    The players selected for the upcoming mission.
@@ -1517,22 +1939,21 @@ class rl18730(Bot):
         team_list: List[TPlayer] = [self]
 
         if self.game.turn == 1:  # if turn 1, we pick the next leader to join us.
-            team_list.append(self.game.players[(self.index + 1) % len(self.game.players)])
+            team_list.append(players[(self.index + 1) % len(players)])
             return team_list
 
         elif count == 2:
 
             player_suspicions: Dict[TPlayer, float] = self.heuristic_suspicion_dict
-            team_list.append(min(self.others(), key=lambda k: player_suspicions[k]))
+            team_list.append(min(random.sample(self.others(), 4), key=lambda k: player_suspicions[k]))
             return team_list
 
         least_suspicious: List[TPlayer] = min(
-            self.the_other_role_combos, key=lambda k: self.suspicion_for_each_role_combo[k]
-        ).extract_sublist_from(self.game.players)
+            random.sample(self.the_other_role_combos, 6), key=lambda k: self.suspicion_for_each_role_combo[k]
+        ).extract_sublist_from(players)
 
         #the_others: List[TPlayer] = self.others()
         return [self] + least_suspicious
-
 
 
     def onTeamSelected(self, leader: TPlayer, team: List[TPlayer]) -> None:
@@ -1603,6 +2024,16 @@ class rl18730(Bot):
                 # there's a ~50% chance that we will have an excuse to vote against it.
                 if not self._vote_like_a_normal_resistance_member(team):
                     return False
+
+                if self.other_spy == self.game.leader:
+                    # if the leader is the other spy, chances are that they have a cunning plan.
+                    return True
+                else:
+                    # TODO use a neural network to work out if the optimal play here would be to
+                    #  let the vote fail or to let the vote pass.
+                    pass
+
+
                 pass
 
 
@@ -1633,14 +2064,13 @@ class rl18730(Bot):
         # finds the most suspicious players (or, in other words, the most likely team of spies).
         # if either of them are on this team, we vote it down.
         most_sus_players: List[TPlayer] = max(
-            self.the_other_role_combos, key=lambda k: self.suspicion_for_each_role_combo[k]
+            random.sample(self.the_other_role_combos, 6), key=lambda k: self.suspicion_for_each_role_combo[k]
         ).extract_sublist_from(self.game.players)
 
         if most_sus_players[0] in team or most_sus_players[1] in team:
             return False
         else:
             return True
-
 
     def onVoteComplete(self, votes: List[bool]) -> None:
         """Callback once the whole team has voted.
@@ -1657,7 +2087,25 @@ class rl18730(Bot):
     def sabotage(self) -> bool:
         """Decide what to do on the mission once it has been approved.  This
         function is only called if you're a spy, otherwise you have no choice.
+
+        This is mostly just a wrapper for the _sabotage_logic method,
+        which gets the result of that, adds the current gamestate id to
+        the list of missions that this bot sabotaged (if true),
+        and then returns that result.
+
         :return: bool        Yes to shoot down a mission.
+        """
+        sabotaging: bool = self._sabotage_logic()
+        if sabotaging:
+            self.missions_that_i_sabotaged.append(self.current_gamestate)
+        return sabotaging
+
+    def _sabotage_logic(self) -> bool:
+        """
+        The actual logic for the sabotage function.
+        It's held in here, so the sabotage method can then easily get the result of this,
+        and add it to the list of missions this bot sabotaged (if appropriate)
+        :return: true to sabotage a mission.
         """
         spies_in_team: List[TPlayer] = [p for p in self.game.team if p in self.spies]
         if len(spies_in_team) > 1:
@@ -1666,8 +2114,21 @@ class rl18730(Bot):
                 # or if the resistance are guaranteed to win if nobody sabotages
                 return True
 
-            # TODO: work out probability of other spies in team sabotaging
-            pass
+            if self.game.leader == self.other_spy:
+                # if the other spy is the leader, we let them sabotage instead.
+                return False
+
+            # works out how likely the other spy is to sabotage,
+            return random.random() > rl18730._sabotage_chance_stats.get_sabotage_chance(
+                self.other_spy.name,
+                self.current_gamestate,
+                self.game.leader == self.other_spy,
+                True,
+                self.game.leader in self.spies
+            )
+
+        # TODO: is it better to sabotage or to let this one through unsabotaged? might need to refer to the results
+        #  from the NN earlier on.
         return True
 
     def onMissionComplete(self, sabotaged: int) -> None:
@@ -1722,7 +2183,7 @@ class rl18730(Bot):
 
         the_players: List[TPlayer] = self.game.players
 
-        for rp in [*self.suspicion_for_each_role_combo.keys()]:
+        for rp in self.suspicion_for_each_role_combo.keys():
             sus_level: float = 1
             rp_list: Tuple[bool, bool, bool, bool, bool] = rp.get_value()
             for r in range(len(rp_list)):
@@ -1745,7 +2206,7 @@ class rl18730(Bot):
         #    print("{}: {}".format(rp, self.suspicion_for_each_role_combo[rp]))
 
 
-        this_round_record: TeamRecord = self.temp_team_record.generate_teamrecord_from_data
+        #this_round_record: TeamRecord = self.temp_team_record.generate_teamrecord_from_data
 
         # TODO: team record in the form
         #       * leader sus level
@@ -1754,7 +2215,10 @@ class rl18730(Bot):
         #       * outcome (sabotages)
         #      so I can put that into some per-gamestate neural networks(?)
 
-        self.team_records[self.current_gamestate] = this_round_record
+        self.game_record.add_teamrecord_to_records(
+            self.current_gamestate,
+            self.temp_team_record.generate_teamrecord_from_data
+        )
 
 
         pass
@@ -1833,7 +2297,7 @@ class rl18730(Bot):
             str,
             Union[
                 Dict[
-                    str,
+                    int,
                     Union[
                         Tuple[int, int, int, int, int],
                         Dict[str, float],
@@ -1845,15 +2309,35 @@ class rl18730(Bot):
                 Tuple[int, int, int, int, int]
             ]
         ] = {
-            "teams": {},
+            "teams": self.game_record.json_loggable_teamrecords,
             "res_win": win,
             "spies": tuple(known)
         }
 
-        for k in [*self.team_records.keys()]:
-            log_dict["teams"][k] = self.team_records[k].loggable_dict
+
+        #for k in [*self.team_records.keys()]:
+        #    log_dict["teams"][k] = self.team_records[k].loggable_dict
 
         self.log.debug(json.dumps(log_dict))
+
+        rl18730._sabotage_chance_stats.add_sabotage_info(
+            self.game_record.get_info_about_sabotages_from_spies_for_sabotage_records(
+                [*spies], self, self.spy, self.missions_that_i_sabotaged
+            )
+        )
+
+        """
+        self._sabotage_chance_stats.add_sabotage_info(
+            self.game_record.get_info_about_sabotages_from_spies_for_sabotage_records(
+                [*spies], self, self.spy, self.missions_that_i_sabotaged
+            )
+        )
+        """
+
+        with open(resources_file_path/"sabotages.p", "wb") as p:
+            pickle.dump(rl18730._sabotage_chance_stats, p)
+            p.close()
+
 
         # for k in [*self.team_records.keys()]:
         #    print("{:3d} {}".format(k, self.team_records[k]))
