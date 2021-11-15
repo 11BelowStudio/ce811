@@ -1,5 +1,7 @@
 # Neural-network Driving Game
 # November 2021, Michael Fairbank, University of Essex, part of Module CE811
+from typing import List, Tuple
+
 import pygame, math, random, sys
 from vector import Vector2D
 from TrackLayout import TrackLayout
@@ -111,13 +113,18 @@ class NeuralSteeringAgent(SteeringAgent):
         # Build an input vector containing information of what is probably important to making a driving decision.
         # The first two inputs give information about where we are on the track globally (could be useful in deciding which corners can be cut through by the car)
         # The next two inputs contain xte and driving angle compared to road - both rescaled to range [-1,1]
+
         input_vector=np.array([[math.sin(d),math.cos(d), xte/(track_width/2), np.tanh(delta_angle/(math.pi/16))]])
+
         # run a standard neural network with just one hidden layer, and tanh activation functions everywhere.
         # Note, we're doing this in Numpy, not tensorflow.  The functions matmul etc. have much the same names and do the same things.
         # But we don't get automatic-differentiation with Numpy, which we don't need anyway because we're using a GA to train our network.
+
         h1=np.tanh(np.matmul(input_vector,self.W1)+self.b1)
         output=np.tanh(np.matmul(h1,self.W2)+self.b2)
+
         # Hopefully the output will contain useful information to drive the car (it will if the neural network is trained properly!)
+
         steering_output=(output[0,1])
         speed_output=(output[0,0])/2+0.5 # rescale it from [-1,1] to [0,1]
         return speed_output, steering_output
@@ -181,6 +188,85 @@ def run_silently(track_layout, driving_agent, max_steps=1000, deltaT=1/50):
             break
     return track_distance_driven
 
+
+def genetic_algorithm_fitness(chromo: np.ndarray, step_count: int, track_layout: TrackLayout, deltaT: float) -> float:
+    """
+    Obtains the fitness of an individual we're testing with our genetic algorithm
+    :param chromo: the chromosome for the individual
+    :param step_count: timesteps for the test
+    :param track_layout: track layout it's being tested on
+    :param deltaT: timestep size for the test
+    :return: fitness of that individual
+    """
+    return run_silently(
+        track_layout,
+        NeuralSteeringAgent(
+            track_layout.preferred_start_point[0],
+            track_layout.preferred_start_point[1],
+            None,
+            step_count,
+            chromo
+        ),
+        step_count,
+        deltaT
+    )
+
+
+def genetic_algorithm_runner(gens: int, restarts: int, chromo_length: int, mut: float, initial_range: float,
+                             step_count: int,
+                             track_layout: TrackLayout, deltaT: float, printouts: bool = True
+                             ) -> List[Tuple[np.ndarray, float]]:
+    """
+    Runs the genetic algorithm stuff
+    :param gens: how many generations are we running?
+    :param restarts: how many restarts will we be doing?
+    :param chromo_length: how long is the chromosome?
+    :param mut: what's the mutation rate?
+    :param initial_range: range of the values that the first individual will be initialized with
+    :param step_count: timestep count to be used when evaluating fitness
+    :param track_layout: track layout we're testing it on
+    :param deltaT: deltaT for the test
+    :param printouts: set this to true if we want printouts from this test
+    :return: A list of the best chromosomes produced by the genetic algorithm sorted by fitness
+    """
+    fittests: List[Tuple[np.ndarray, float]] = []
+    for r in range(restarts):
+        current_individual: np.ndarray = np.clip(
+            np.random.normal(loc=0, scale=initial_range, size=(chromo_length)),
+            -1.0,
+            1.0
+        )
+
+        fitness: float = genetic_algorithm_fitness(current_individual, step_count, track_layout, deltaT)
+
+        for g in range(gens):
+            next_individual: np.ndarray = np.clip(
+                current_individual + np.random.normal(loc=0, scale=mut, size=(chromo_length)),
+                -1.0,
+                1.0
+            )
+            next_fitness: float = genetic_algorithm_fitness(next_individual, step_count, track_layout, deltaT)
+
+            if next_fitness > fitness:
+                current_individual = next_individual
+                fitness = next_fitness
+
+        fittests.append((current_individual, fitness))
+        if printouts:
+            print("Round {} best fitness: {}".format(r, fitness))
+
+    fittests.sort(key=lambda kv: kv[1], reverse=True)
+    if printouts:
+        print("")
+        print("Fittest individuals:")
+        print("Fitness: chromosome")
+        for f in fittests:
+            print("{}: {}".format(np.format_float_scientific(f[1], precision=3, exp_digits=3), f[0].tolist()))
+    return fittests
+
+
+
+
 if __name__=="__main__":
     deltaT=1/50
     track_layout=TrackLayout()
@@ -191,26 +277,41 @@ if __name__=="__main__":
         AUTONOMOUS = 2
         NEURAL = 3
 
-    agent=Agents.AUTONOMOUS # TODO modify this line to switch agent
+    agent=Agents.NEURAL # TODO modify this line to switch agent
     
     
     if agent==Agents.NEURAL:
-        chromosome_length=NeuralSteeringAgent.chromosome_length
-        chromosome=np.random.normal(loc=0,scale=0.1,size=(chromosome_length)) # Choose the initial chromosome randomly.
-        # TODO fix the loop below to make it perform a simple GA training process.
         # For simplicity, choose the "stochastic hill climber"
         # See lecture slides on "stochastic hill climber"
         # Use the "run_silently" function to evaluate the fitness of a chromosome.  This runs the car around the track quickly and returns the distance travelled as the fitness.
         # If necessary then see also https://machinelearningmastery.com/stochastic-hill-climbing-in-python-from-scratch/
         # For the mutation operator, I found that just adding an array of randomly distributed noise (normally distributed with standard deviation 0.05) worked quite well.  See help on np.random.normal for ideas.
         # You might need more trials than 200, and you might need several random restarts (just re-run the program yourself to do this).
-        for generation in range(200):
-            chromosome_test=chromosome+np.zeros_like(chromosome)
-            driving_agent = NeuralSteeringAgent(track_layout.preferred_start_point[0],track_layout.preferred_start_point[1], None,1000,chromosome_test)    
-            fitness=run_silently(track_layout, driving_agent, 1000, deltaT)
-            print("Generation",generation,"Fitness",round(fitness,2),"BestFitness",0)
+
+        # hyper-parameters for this GA run
+        generations: int = 400
+        attempts: int = 10
+        mutation_deviation: float = 0.05
+        initial_deviation: float = 2
+        test_timesteps: int = 1000
+        printouts: bool = True
+
+        # And here we actually run the GA stuff.
+        fittests: List[Tuple[np.ndarray, float]] = genetic_algorithm_runner(
+            generations,
+            attempts,
+            NeuralSteeringAgent.chromosome_length,
+            mutation_deviation, initial_deviation,
+            test_timesteps,
+            track_layout,
+            deltaT,
+            printouts
+        )
+
         # after your GA has run, we should have built a good chromosome here....
-        print("Best chromosome","["+(",".join(map(str, chromosome.tolist())))+"]")
+        print("Best chromosome: {}: {}".format(fittests[0][1], fittests[0][0].tolist()))
+
+        chromosome: np.ndarray = fittests[0][0]
         
     pygame.init()
     pygame.font.init()
