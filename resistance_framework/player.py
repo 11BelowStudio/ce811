@@ -3,7 +3,7 @@ import logging.handlers
 
 import core
 
-from typing import TypeVar, List, Dict, Set
+from typing import TypeVar, List, Dict, Set, NoReturn
 
 TPlayer = TypeVar("TPlayer", bound="Player")
 """Anything that's a subtype of the 'Player' class"""
@@ -75,7 +75,7 @@ class Bot(Player):
 
     __metaclass__ = core.Observable
 
-    def onGameRevealed(self, players: List[TPlayer], spies: Set[TPlayer]) -> None:
+    def onGameRevealed(self, players: List[TPlayer], spies: Set[TPlayer]) -> NoReturn:
         """This function will be called to list all the players, and if you're
         a spy, the spies too -- including others and yourself.
         :param players:  List of all players in the game including you.
@@ -83,7 +83,7 @@ class Bot(Player):
         """
         pass
 
-    def onMissionAttempt(self, mission: int, tries: int, leader: TPlayer) -> None:
+    def onMissionAttempt(self, mission: int, tries: int, leader: TPlayer) -> NoReturn:
         """Callback function when a new turn begins, before the
         players are selected.
         :param mission:  Integer representing the mission number (1..5).
@@ -100,7 +100,7 @@ class Bot(Player):
         """
         raise NotImplemented
 
-    def onTeamSelected(self, leader: TPlayer, team: List[TPlayer]) -> None:
+    def onTeamSelected(self, leader: TPlayer, team: List[TPlayer]) -> NoReturn:
         """Called immediately after the team is selected to go on a mission,
         and before the voting happens.
         :param leader:   The leader in charge for this mission.
@@ -115,7 +115,7 @@ class Bot(Player):
         """ 
         raise NotImplemented
 
-    def onVoteComplete(self, votes: List[bool]) -> None:
+    def onVoteComplete(self, votes: List[bool]) -> NoReturn:
         """Callback once the whole team has voted.
         :param: votes        Boolean votes for each player (ordered).
         """
@@ -128,13 +128,13 @@ class Bot(Player):
         """
         raise NotImplemented
 
-    def onMissionComplete(self, sabotaged: int) -> None:
+    def onMissionComplete(self, sabotaged: int) -> NoReturn:
         """Callback once the players have been chosen.
         :param sabotaged:    Integer how many times the mission was sabotaged.
         """
         pass
 
-    def onMissionFailed(self, leader: TPlayer, team: List[TPlayer]) -> None:
+    def onMissionFailed(self, leader: TPlayer, team: List[TPlayer]) -> NoReturn:
         """Callback once a vote did not reach majority, failing the mission.
         :param leader:       The player responsible for selection.
         :param team:         The list of players chosen for the mission.
@@ -152,7 +152,7 @@ class Bot(Player):
         """
         return {}
 
-    def onAnnouncement(self, source: Player, announcement: Dict[Player, float]) -> None:
+    def onAnnouncement(self, source: Player, announcement: Dict[Player, float]) -> NoReturn:
         """Callback if another player decides to announce beliefs about the
         game.  This is passed as a potentially incomplete mapping from player
         to spy probability.
@@ -162,7 +162,7 @@ class Bot(Player):
         """
         pass
 
-    def say(self, message: str) -> None:
+    def say(self, message: str) -> NoReturn:
         """Helper function to print a message in the global game chat, visible
         by all the other players.
 
@@ -170,7 +170,7 @@ class Bot(Player):
         """
         self.log.info(message)
 
-    def onMessage(self, source: TPlayer, message: str) -> None:
+    def onMessage(self, source: TPlayer, message: str) -> NoReturn:
         """Callback if another player sends a general free-form message to the
         channel.  This is passed in as a generic string that needs to be parsed.
 
@@ -179,7 +179,7 @@ class Bot(Player):
         """
         pass
 
-    def onGameComplete(self, win: bool, spies: Set[TPlayer]) -> None:
+    def onGameComplete(self, win: bool, spies: Set[TPlayer]) -> NoReturn:
         """Callback once the game is complete, and everything is revealed.
         :param win:          Boolean true if the Resistance won.
         :param spies:        List of only the spies in the game.

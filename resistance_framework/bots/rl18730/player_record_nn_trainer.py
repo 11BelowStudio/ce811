@@ -2,7 +2,7 @@
 import pickle
 from typing import List, Tuple, TypeVar, Dict
 
-from bots.rl18730 import PlayerRecord, PlayerRecordHolder, PlayerRecordNNEstimator, RoleAllocationEnum, GamestateTree, TPlayer
+from bots.rl18730 import PlayerRecord, GameRecordHistory, GameRecord, PlayerRecordNNEstimator, RoleAllocationEnum, GamestateTree, TPlayer
 
 import tensorflow as tf
 
