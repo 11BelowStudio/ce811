@@ -2,10 +2,12 @@ import os
 import pickle
 import random
 
+from tensorflow import keras
+
 from player import Bot, Player
 from game import State
 
-from typing import TypeVar, List, Dict, Set, Tuple, Iterable, FrozenSet, Union
+from typing import TypeVar, List, Dict, Set, Tuple, Iterable, FrozenSet, Union, NoReturn, Any
 
 from enum import Enum
 
@@ -975,6 +977,18 @@ class PlayerRecord(object):
         """Whether or not this player is a spy. Returns None if not known for sure yet."""
         return self._is_spy
 
+    def get_prior_round_indices(self, round_n: int = -1) -> List[int]:
+        """
+        Obtains the indices for every single prior round
+        :param round_n: the current round (get everything before round n). if set to -1, returns all prior rounds
+        :return: a list of the indices of the prior rounds
+        """
+        indices: List[int] = [*self._all_missions_and_sabotages_with_teams.keys()]
+        if round_n == -1:
+            return indices
+        else:
+            return list(indices[0:round_n])
+
     @property
     def all_missions_lead(self) -> List[int]:
         """All missions that this player lead"""
@@ -1226,9 +1240,6 @@ class PlayerRecord(object):
             (sabotages on missions not on but voted for/4)
         ) / ((lead/4) + attended + (not on but voted for/4))
         """
-        #import traceback
-        #traceback.print_stack()
-
         # TODO more refined calculations of suspiciousness?
         #  Could try to use some neural networks/bayesian belief stuff/etc.
         #  maybe factoring in votes?
@@ -1237,18 +1248,18 @@ class PlayerRecord(object):
             if lookahead_info is None:
                 lookahead = False  # aborting the lookahead if we don't know anything about the lookahead
 
-        if everything_before_round < 0:  # if negative value given, we take everything so far into account
-            everything_before_round = len(self._all_missions_and_sabotages_with_teams)
+        #if everything_before_round < 0:  # if negative value given, we take everything so far into account
+        #    everything_before_round = len(self._all_missions_and_sabotages_with_teams)
 
         #print([*self._all_missions_and_sabotages_with_teams.keys()])
         #print([*self._all_missions_and_sabotages_with_teams.keys()][0:everything_before_round])
 
-        all_prior_rounds: List[int] = [*self._all_missions_and_sabotages_with_teams.keys()][0:everything_before_round]
+        all_prior_rounds: List[int] = self.get_prior_round_indices(everything_before_round)
 
         #print(all_prior_rounds)
 
         if len(all_prior_rounds) == 0 and not lookahead:
-            return 0.25  # 0.25 suspicion if no data (and not looking ahead at new data)
+            return 0.5  # 0.5 suspicion if no data (and not looking ahead at new data)
 
         if len([h for h in self.hammers_thrown if h in all_prior_rounds]) > 0:
             return 1.0  # only a spy would throw a hammer vote.
@@ -1290,7 +1301,7 @@ class PlayerRecord(object):
                 , 1.0)
             #  return (sum(lead_sus) * max(1,lead_len)) + (sum(been_on_sus) * max(1, been_len)) / (lead_len + been_len) * (max(1, lead_len) * max(1, been_len))
         else:
-            return 0.25
+            return 0.5
         #elif total_concluded_missions_voted_on > 0:
         #    for_against_sus: float = max(
         #        (
@@ -1310,6 +1321,213 @@ class PlayerRecord(object):
         """
         teams_in: List[Tuple[int, int, int]] = self.not_rejected_teams_been_on_with_sabotage_count_and_size
         return [(t[0], t[1], t[2], t[0] in self._missions_lead) for t in teams_in]
+
+    T_props = TypeVar("T_props", int, Tuple[int, int], Tuple[int, float], Tuple[int, ...])
+    """
+    This is here because the properties are all either lists of ints or lists of tuples of ints.
+    The below method takes one of these lists, and limits it to only have data for all the rounds
+    before round N.
+    """
+    def trim_property_list_to_before_round_n(self, prop_list: List[T_props], round_n: int = -1) -> List[T_props]:
+        """
+        Trims the given property list to only hold data for all the rounds before the Nth round,
+        returning the trimmed version of that list.
+        :param prop_list: the property list we're trimming
+        :param round_n: nth round. -1 returns everything.
+        :return: A trimmed copy of that property list.
+        """
+        if round_n == -1 or len(prop_list) == 0:
+            return prop_list
+        prior_rounds: List[int] = self.get_prior_round_indices(round_n)
+        # we get the round IDs of the prior rounds
+        if len(prior_rounds) == 0:
+            return []
+
+        if type(prop_list[0]) == int:
+            # if the given list is a list of ints,
+            # we return a copy of the given list where items of that list
+            # are in prior_rounds
+            return [p for p in prop_list if p in prior_rounds]
+        else:
+            # if the given list is a list of tuples of ints,
+            # we return a copy of the given list where the first element
+            # of the list items are in the list of prior rounds
+            return [p for p in prop_list if p[0] in prior_rounds]
+
+
+    def get_padded_and_masked_sus_lists_for_player_record_trainer(
+            self, round_num: int = -1
+    ) -> List[Tuple[float, float, float, float, float]]:
+        """
+        Gets a list of the
+        mission_teams_lead_sus_levels, mission_teams_been_on_sus_levels, approved_teams_sus_levels,
+        rejected_teams_sus_levels, and sus_levels_of_non_hammer_teams_approved_whilst_not_on
+        values, grouped per round, of all the rounds before the nth round.
+
+        Any missing values are padded with -1s.
+
+        :param round_num: nth round. Use -1 if we want all prior rounds.
+        :return: -1 padded list of (mission_teams_lead_sus_levels, missions_teams_been_on_sus_levels,
+        approved_teams_sus_levels, rejected_teams_sus_levels, sus_levels_of_non_hammer_teams_approved_whilst_not_on)
+        values per round for all prior rounds.
+        If there is no value for that thing for the current round, that value is padded with a -1.
+        """
+
+        prior_rounds: List[int] = self.get_prior_round_indices(round_num)
+
+        if len(prior_rounds) == 0:
+            return -1.0, -1.0, -1.0, -1.0, -1.0
+
+        lead_sus: List[Tuple[int, float]] = \
+            self.trim_property_list_to_before_round_n(self.mission_teams_lead_sus_levels, round_num)
+        been_sus: List[Tuple[int, float]] = \
+            self.trim_property_list_to_before_round_n(self.mission_teams_been_on_sus_levels, round_num)
+        for_sus: List[Tuple[int, float]] = \
+            self.trim_property_list_to_before_round_n(self.approved_teams_sus_levels, round_num)
+        against_sus: List[Tuple[int, float]] = \
+            self.trim_property_list_to_before_round_n(self.rejected_teams_sus_levels, round_num)
+        for_not_on_sus: List[Tuple[int, float]] = self.trim_property_list_to_before_round_n(
+            self.sus_levels_of_non_hammer_teams_approved_whilst_not_on, round_num
+        )
+        l_cursor = b_cursor = f_cursor = a_cursor = n_cursor = 0
+        l_more = len(lead_sus) > 0
+        b_more = len(been_sus) > 0
+        f_more = len(for_sus) > 0
+        a_more = len(against_sus) > 0
+        n_more = len(for_not_on_sus) > 0
+
+        output_data: List[Tuple[float, float, float, float, float]] = []
+
+        for r in prior_rounds:
+            l = b = f = a = n = -1.0
+            if l_more and lead_sus[l_cursor][0] == r:
+                l = lead_sus[l_cursor][1]
+                l_cursor += 1
+                l_more = l_cursor < len(lead_sus)
+            if b_more and been_sus[b_cursor][0] == r:
+                b = been_sus[b_cursor][1]
+                b_cursor += 1
+                b_more = b_cursor < len(been_sus)
+            if f_more and for_sus[f_cursor][0] == r:
+                f = for_sus[f_cursor][1]
+                f_cursor += 1
+                f_more = f_cursor < len(for_sus)
+            if a_more and against_sus[a_cursor][0] == r:
+                a = against_sus[a_cursor][1]
+                a_cursor += 1
+                a_more = a_cursor < len(against_sus)
+            if n_more and for_not_on_sus[n_cursor][0] == r:
+                n = for_not_on_sus[n_cursor][1]
+                n_cursor += 1
+                n_more = n_cursor < len(for_not_on_sus)
+            output_data.append((l, b, f, a, n))
+        return output_data
+
+
+
+class PlayerRecordHolder(object):
+    """
+    A class that can be used to hold player records for games
+    """
+
+    def __init__(self):
+        self._records: \
+            List[Tuple[Tuple[PlayerRecord, PlayerRecord, PlayerRecord, PlayerRecord, PlayerRecord], int]] = []
+        """
+        All the player records, grouped per game.
+        ((all 5 player records), game length, resistance win)
+        """
+
+    def add_records_from_game(
+            self, new_records:
+            Tuple[Tuple[PlayerRecord, PlayerRecord, PlayerRecord, PlayerRecord, PlayerRecord], int]
+    ) -> NoReturn:
+        """
+        Adds the new records from a game to the PlayerRecordHolder.
+        :param new_records: ((all 5 PlayerRecords from a game), game length). 
+        :return: nothing
+        """
+        self._records.append(new_records)
+
+    @property
+    def get_records(self) -> \
+            List[Tuple[Tuple[PlayerRecord, PlayerRecord, PlayerRecord, PlayerRecord, PlayerRecord], int]]:
+        """
+        Obtains all of the records held in this PlayerRecordHolder
+        :return: the list of all the records in this holder (arranged per game)
+        """
+        return self._records.copy()
+
+    @property
+    def get_training_set_and_test_set_and_validation_set(
+            self, training_size: float = 0.4, test_size: float = 0.4
+    ) -> Tuple[List[Tuple[Tuple[PlayerRecord, PlayerRecord, PlayerRecord, PlayerRecord, PlayerRecord], int]], ...]:
+        """
+        Attempts to create a training set and a validation set from the data we have.
+        :param training_size: what proportion of our data are we putting into our training set?
+        :param test_size: what proportion of our data are we putting into our test set?
+        :return: a tuple with (training set data, test set data, validation set data)
+        """
+
+        rec_len: int = len(self._records)
+
+        training_len: int = int(rec_len * training_size)
+        test_len: int = int(rec_len * test_size)
+
+        tt_len: int = training_len + test_len
+
+        val_len: int = rec_len - training_len - test_len
+
+        assert training_len > 0
+        assert test_len > 0
+        assert val_len > 0
+        assert training_len + tt_len == rec_len
+
+        shuffled_all: List[
+            Tuple[Tuple[PlayerRecord, PlayerRecord, PlayerRecord, PlayerRecord, PlayerRecord], int]
+        ] = random.sample(self._records, rec_len)
+
+        return shuffled_all[0:training_len], shuffled_all[training_len:tt_len], shuffled_all[tt_len:rec_len]
+
+
+
+class PlayerRecordNNEstimator(object):
+
+    mask: float = -1.0
+    no_data_tuple: Tuple[float, float, float, float, float] = (-1.0, -1.0, -1.0, -1.0, -1.0)
+
+    def __init__(self, model: keras.Model):
+        self._model: keras.Model = model
+
+    def estimate_individual_spy_chances_from_playerrecords(
+            self,
+            records: Tuple[PlayerRecord, PlayerRecord, PlayerRecord, PlayerRecord, PlayerRecord],
+            round_num: int = -1
+    ) -> Tuple[Tuple[float, float], Tuple[float, float], Tuple[float, float], Tuple[float, float], Tuple[float, float]]:
+        """
+        Uses the model to estimate the individual chances of each player being a spy
+        :param records: the playerrecords we have access to
+        :param round_num: current round number (-1 to get data for all rounds so far)
+        :return: (is spy chance, not spy chance) calculated by the model for each of the individual spy chances things
+        """
+        # noinspection PyTypeChecker
+        return tuple(self.single_spy_chances(pr, round_num) for pr in records)
+
+    def single_spy_chances(self, pr: PlayerRecord, round: int = -1) -> Tuple[float, float]:
+
+        if len(pr.trim_property_list_to_before_round_n(pr.hammers_thrown, round)) > 0:
+            # pretty much 100% a spy if they're throwing a hammer vote.
+            return 1.0, 0.0
+
+        inputs: List[Tuple[float, float, float, float, float]] = \
+            pr.get_padded_and_masked_sus_lists_for_player_record_trainer(round)
+
+        #if all(i == PlayerRecordNNEstimator.no_data_tuple for i in inputs):
+        #    return 0.5, 0.5
+
+        return self._model(inputs)
+
+
 
 
 class SpySabotageChanceStats(object):
@@ -1956,6 +2174,15 @@ class rl18730(Bot):
     if os.path.exists(resources_file_path / "win_probs.p"):
         with open(resources_file_path / "win_probs.p", "rb") as p:
             _win_probabilities_table: SpySabotageChanceStats = pickle.load(p)
+            p.close()
+
+    _player_record_history: PlayerRecordHolder = PlayerRecordHolder()
+    """
+    Keeps track of player records
+    """
+    if os.path.exists(resources_file_path / "player_records.p"):
+        with open(resources_file_path / "player_records.p", "rb") as p:
+            _player_record_history: PlayerRecordHolder = pickle.load(p)
             p.close()
 
     def __init__(self, game: State, index: int, spy: bool):
@@ -2687,6 +2914,14 @@ class rl18730(Bot):
             RoleAllocationEnum(tuple(known))
         )
 
+        # noinspection PyTypeChecker
+        rl18730._player_record_history.add_records_from_game(
+            (
+                tuple([*self.player_records.values()]),
+                len(self.game_record.list_of_state_ids)
+            )
+        )
+
         """
         self._sabotage_chance_stats.add_sabotage_info(
             self.game_record.get_info_about_sabotages_from_spies_for_sabotage_records(
@@ -2701,6 +2936,11 @@ class rl18730(Bot):
         with open(resources_file_path/"win_probs.p", "wb") as p:
             pickle.dump(rl18730._win_probabilities_table, p)
             p.close()
+
+        with open(resources_file_path/"player_records.p", "wb") as p:
+            pickle.dump(rl18730._player_record_history, p)
+            p.close()
+
 
         # for k in [*self.team_records.keys()]:
         #    print("{:3d} {}".format(k, self.team_records[k]))
