@@ -1,17 +1,18 @@
 # Neural-network Driving Game
 # November 2021, Michael Fairbank, University of Essex, part of Module CE811
-import pygame,math,random,sys
+import pygame, math, random, sys
 from vector import Vector2D
 from TrackLayout import TrackLayout
 from enum import Enum     
 import numpy as np
 
+
 class SteeringAgent:
 
     def __init__(self, init_x, init_y, draw_colour, max_speed):
-        self.agent_position=Vector2D(init_x,init_y)    
-        self.agent_velocity=Vector2D(0,0)
-        self.agent_orientation=0 # heading North initially
+        self.agent_position = Vector2D(init_x,init_y)
+        self.agent_velocity = Vector2D(0,0)
+        self.agent_orientation = 0 # heading North initially
         self.max_speed=max_speed
         self.draw_colour=draw_colour
                
@@ -55,15 +56,36 @@ class KeyboardSteeringAgent(SteeringAgent):
 
 class AutonomousSteeringAgent(SteeringAgent):
     def calculate_driving_decision(self,xte, road_angle, distance_around_track):
-        # This function must return a pair of numbers, (target_speed, steering_wheel_position), with 0<=target_speed<=1 and -1<=steering_wheel_position<=1
-        # Note that road_angle and self.agent_orientation are in radians.  By comparing them, and allowing for the fact that agent_orientation could have any multiple of 2pi added to it, we can make the steering decision. However we must also consider the xte (cross-track error).
+        # This function must return a pair of numbers, (target_speed, steering_wheel_position),
+        # with 0<=target_speed<=1 and -1<=steering_wheel_position<=1
+        # Note that road_angle and self.agent_orientation are in radians.
+
+        # By comparing them, and allowing for the fact that agent_orientation could have any multiple of 2pi added to it,
+        # we can make the steering decision. However we must also consider the xte (cross-track error).
         # If abs(xte)>=track_layout.track_width then it means we've crashed off the road.
         # Look at xte and road_angle and self.agent_orientation+2n*pi to make a decision about which way to steer
         # If xte>0 then we should probably turn left  (depending on the orientation that the car is already in)
         # If xte<0 then we should probably turn right (depending on the orientation that the car is already in)
-        steering_wheel_position=0        
-        target_speed=1
-        # TODO insert autonomous driving logic here...
+
+        current_orientation = self.agent_orientation % (2 * math.pi)
+        steering_wheel_position = 0
+        buffer_dist = track_layout.track_width/4
+        target_speed = 1
+        orientation_difference = current_orientation - road_angle
+
+        if xte > buffer_dist:
+            if orientation_difference < 0:
+                steering_wheel_position = 1
+            elif orientation_difference > 0:
+                steering_wheel_position = -1
+
+        elif xte < -buffer_dist:
+            if orientation_difference < 0:
+                steering_wheel_position = -1
+            elif orientation_difference > 0:
+                steering_wheel_position = 1
+
+
         return (target_speed, steering_wheel_position)
 
         
@@ -81,8 +103,8 @@ class NeuralSteeringAgent(SteeringAgent):
         
        
     def calculate_driving_decision(self,xte, road_angle, distance_around_track):
-        delta_angle=self.agent_orientation-road_angle
-        delta_angle-=((delta_angle+math.pi)//(2*math.pi))*(2*math.pi) # try and push the delta_angle to between -pi and +pi
+        delta_angle = self.agent_orientation-road_angle
+        delta_angle -= ((delta_angle+math.pi)//(2*math.pi))*(2*math.pi) # try and push the delta_angle to between -pi and +pi
         total_track_length=19785.189051733727
         track_width=900
         d=distance_around_track/total_track_length
@@ -136,10 +158,11 @@ def convert_to_screencoords(array):
     array=array*np.array([[1,-1]])+np.array([[0,screen_size[1]]])
     return array.astype(np.int32)
 
+
 def run_silently(track_layout, driving_agent, max_steps=1000, deltaT=1/50):
     # Run the car round the track without any graphics involved (useful for training with the G.A.)
     # The car runs until it either crashes into a wall, or max_steps is reached.  This function then returns the score (fitness) as total distance driven.
-    cld=track_layout.calculateCarLocationDetails(driving_agent.agent_position.x, driving_agent.agent_position.y)
+    cld = track_layout.calculateCarLocationDetails(driving_agent.agent_position.x, driving_agent.agent_position.y)
     initial_distance_around_track=cld.distance_around_track
     laps_completed=0
     previous_segment_number=cld.segment_number
@@ -162,11 +185,13 @@ if __name__=="__main__":
     deltaT=1/50
     track_layout=TrackLayout()
     from enum import Enum
+
     class Agents(Enum):
         KEYBOARD = 1
         AUTONOMOUS = 2
-        NEURAL = 3    
-    agent=Agents.KEYBOARD # TODO modify this line to switch agent
+        NEURAL = 3
+
+    agent=Agents.AUTONOMOUS # TODO modify this line to switch agent
     
     
     if agent==Agents.NEURAL:
