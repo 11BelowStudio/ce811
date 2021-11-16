@@ -10,7 +10,7 @@ from tensorflow import keras
 from player import Bot, Player
 from game import State
 
-from typing import TypeVar, List, Dict, Set, Tuple, Iterable, FrozenSet, Union, NoReturn, Any
+from typing import TypeVar, List, Dict, Set, Tuple, Iterable, FrozenSet, Union, NoReturn, Any, Callable
 
 from enum import Enum
 
@@ -24,7 +24,7 @@ TPlayer = TypeVar("TPlayer", bound="Player")
 T = TypeVar("T")
 """A generic type that could be anything."""
 
-resources_file_path: Path = Path(__file__).parent/"rl18730"
+resources_file_path: Path = Path().cwd()/"bots\\rl18730"
 """
 A file path for resources for this bot
 USAGE:
@@ -796,6 +796,7 @@ class TeamRecord(object):
         return info_dict
 
 
+
 class TempTeamRecord(object):
     """
     Like TeamRecord, but temporary.
@@ -1112,7 +1113,7 @@ class PlayerRecord(object):
         """All teams that this player voted for (index, sabotages, suspect count)"""
         return [
             (kv[0], kv[1][0], kv[1][1])
-            for kv in self._game.all_missions_with_sabotages_and_suspect_counts
+            for kv in self._game.all_missions_with_sabotages_and_suspect_counts.items()
             if kv[0] in self._teams_approved
         ]
 
@@ -1214,8 +1215,8 @@ class PlayerRecord(object):
     def per_round_counts_of_teams_voted_for_and_against_with_suspect_counts(self) -> List[
         Tuple[
             int,
-            Tuple[int, int, int, int, int, int],
-            Tuple[int, int, int, int, int, int]
+            Tuple[int, int, int, int, int, int, int],
+            Tuple[int, int, int, int, int, int, int]
         ]
     ]:
         """
@@ -1227,8 +1228,8 @@ class PlayerRecord(object):
             * tuple with number of times the agent has voted against a team with those suspect counts
                 (indexed to suspect count)
         """
-        for_suspect_counts: List[int, int, int, int, int, int] = [0,0,0,0,0,0]
-        against_suspect_counts: List[int, int, int, int, int, int] = [0,0,0,0,0,0]
+        for_suspect_counts: List[int, int, int, int, int, int, int] = [0,0,0,0,0,0,0]
+        against_suspect_counts: List[int, int, int, int, int, int, int] = [0,0,0,0,0,0,0]
         for_votes: List[Tuple[int, float, int]] = self.teams_approved
         against: List[Tuple[int, float, int]] = self.teams_rejected
         for_cursor = against_cursor = 0
@@ -1239,16 +1240,16 @@ class PlayerRecord(object):
         # noinspection PyTypeChecker
         result_list: List[Tuple[
             int,
-            Tuple[int, int, int, int, int, int],
-            Tuple[int, int, int, int, int, int]
+            Tuple[int, int, int, int, int, int, int],
+            Tuple[int, int, int, int, int, int, int]
         ]] = []
         for i in range(for_len + against_len):
             if for_not_done and for_votes[for_cursor][0] == i:
-                for_suspect_counts[for_votes[for_cursor][2]] += 1
+                for_suspect_counts[min(for_votes[for_cursor][2], 6)] += 1
                 for_cursor += 1
                 for_not_done = for_cursor < for_len
             elif against_not_done and against[against_cursor][0] == i:
-                against_suspect_counts[against[against_cursor][2]] += 1
+                against_suspect_counts[min(against[against_cursor][2], 6)] += 1
                 against_cursor += 1
                 against_not_done = against_cursor < against_len
 
@@ -1408,7 +1409,7 @@ class PlayerRecord(object):
     T_props = TypeVar(
         "T_props",
         int, Tuple[int, int], Tuple[int, float], Tuple[int, float, int], Tuple[int, ...],
-        Tuple[int, Tuple[int, int, int, int, int, int], Tuple[int, int, int, int, int, int]]
+        Tuple[int, Tuple[int, int, int, int, int, int, int], Tuple[int, int, int, int, int, int, int]]
     )
     """
     This is here because the properties are all either lists of ints, or lists of tuples that start with ints.
@@ -1442,9 +1443,11 @@ class PlayerRecord(object):
             return [p for p in prop_list if p[0] in prior_rounds]
 
 
-    def get_padded_and_masked_sus_lists_for_player_record_trainer(
+    def get_padded_and_masked_sus_lists_multiple_rounds_for_player_record_trainer(
             self, round_num: int = -1
-    ) -> List[Tuple[float, float, float, float, float, int, int, int, int, int, int, int, int, int, int, int, int, int]]:
+    ) -> List[Tuple[float, float, float, float, float, int,
+                    int, int, int, int, int, int, int, int, int, int, int, int, int, int
+    ]]:
         """
         Gets a list of the
         mission_teams_lead_sus_levels, mission_teams_been_on_sus_levels, approved_teams_sus_levels,
@@ -1466,8 +1469,8 @@ class PlayerRecord(object):
 
         if len(prior_rounds) == 0:
             return [(-1.0, -1.0, -1.0, -1.0, -1.0, 0,
-                     0, 0, 0, 0, 0, 0,
-                     0, 0, 0, 0, 0, 0)]
+                     0, 0, 0, 0, 0, 0, 0,
+                     0, 0, 0, 0, 0, 0, 0)]
 
         lead_sus: List[Tuple[int, float, int]] = \
             self.trim_property_list_to_before_round_n(self.mission_teams_lead_sus_levels, round_num)
@@ -1483,7 +1486,7 @@ class PlayerRecord(object):
         hammers_thrown: List[int] = self.trim_property_list_to_before_round_n(self.hammers_thrown, round_num)
 
         votes_s_c: List[
-            Tuple[int, Tuple[int, int, int, int, int, int], Tuple[int, int, int, int, int, int]]
+            Tuple[int, Tuple[int, int, int, int, int, int, int], Tuple[int, int, int, int, int, int, int]]
         ] = self.trim_property_list_to_before_round_n(
             self.per_round_counts_of_teams_voted_for_and_against_with_suspect_counts, round_num
         )
@@ -1500,13 +1503,13 @@ class PlayerRecord(object):
         output_data: List[
             Tuple[
                 float, float, float, float, float, int,
-                int, int, int, int, int, int,
-                int, int, int, int, int, int
+                int, int, int, int, int, int, int,
+                int, int, int, int, int, int, int
             ]
         ] = []
 
         for r in prior_rounds:
-            l = b = f = a = n = -1.0
+            l = b = f = a = n = -1.0 # TODO: replace this stuff with the sum(list stuff)/len(list stuff) values
             if l_more and lead_sus[l_cursor][0] == r:
                 l = lead_sus[l_cursor][1]
                 l_cursor += 1
@@ -1533,6 +1536,96 @@ class PlayerRecord(object):
             # noinspection PyTypeChecker
             output_data.append((l, b, f, a, n, h_cursor, *votes_s_c[r][1], *votes_s_c[r][2]))
         return output_data
+
+    @staticmethod
+    def single_round_callable_filtering_thing(
+            filter_this: Collection[T],
+            filter_fun: Callable[[Collection[T]], T],
+            default_val: Tuple[Any, float] = (0, -1.0)
+    ) -> T:
+        """
+        A helper function for the single_round_padded_and_masked_sus_tuple method
+        :param filter_this: a collection we want to filter
+        :param filter_fun: the callable we're using to filter it
+        :param default_val: a value to return if nothing in the collection satisifies filter_fun
+        :return: the first element of filter_this that satisfied filter_fun, else default_val
+        """
+        filter_result = filter(filter_fun, filter_this)
+        if filter_result is None:
+            return default_val
+        res_list = list(filter_result)
+        if len(res_list) == 0:
+            return default_val
+        else:
+            return res_list[0]
+
+    def single_round_padded_and_masked_sus_tuple(self, round_num: int = -1) -> \
+        Tuple[
+            float, float, float, float, float, int,
+            int, int, int, int, int, int, int,
+            int, int, int, int, int, int, int
+        ]:
+        """
+        Used to obtain the padded and masked sus tuple for a single round (the nth round)
+        :param round_num: which round are we trying to get the padded/masked sus tuple for?
+        :return: -1 padded tuple of (mission_teams_lead_sus_levels, missions_teams_been_on_sus_levels,
+        approved_teams_sus_levels, rejected_teams_sus_levels, sus_levels_of_non_hammer_teams_approved_whilst_not_on,
+        hammers_thrown,
+        teams with suspect counts voted for, teams with suspect counts voted against)
+        for the current round
+        """
+
+        #if round_num == -1:
+        #    rev_prior = list(reversed(self._game.get_prior_round_indices()))
+        #    round_index: int = rev_prior[0]
+        #else:
+
+        priors = self._game.get_prior_round_indices()
+
+        if len(priors) == 0:
+            return (
+                -1.0, -1.0, -1.0, -1.0, -1.0, 0,
+                0,0,0,0,0,0, 0,
+                0,0,0,0,0,0, 0
+            )
+
+        round_index: int = list(reversed(priors))[0]
+
+        lead_sus: List[Tuple[int, float, int]] = \
+            self.trim_property_list_to_before_round_n(self.mission_teams_lead_sus_levels, round_num)
+        been_sus: List[Tuple[int, float, int]] = \
+            self.trim_property_list_to_before_round_n(self.mission_teams_been_on_sus_levels, round_num)
+        for_sus: List[Tuple[int, float, int]] = \
+            self.trim_property_list_to_before_round_n(self.approved_teams_sus_levels_and_suspect_count, round_num)
+        against_sus: List[Tuple[int, float, int]] = \
+            self.trim_property_list_to_before_round_n(self.rejected_teams_sus_levels, round_num)
+        for_not_on_sus: List[Tuple[int, float, int]] = self.trim_property_list_to_before_round_n(
+            self.sus_levels_of_non_hammer_teams_approved_whilst_not_on, round_num
+        )
+
+        votes_s_c: Tuple[int, Tuple[int, int, int, int, int, int, int], Tuple[int, int, int, int, int, int, int]] =\
+            self.per_round_counts_of_teams_voted_for_and_against_with_suspect_counts[len(priors)-1]
+
+        filter_cond = lambda kvv: kvv[0] == round_index
+
+        # noinspection PyTypeChecker
+        return (
+            #PlayerRecord.single_round_callable_filtering_thing(lead_sus, filter_cond)[1],
+            sum(lead_sus)/len(lead_sus) if len(lead_sus) > 0 else -1.0,
+            sum(been_sus) / len(been_sus) if len(been_sus) > 0 else -1.0,
+            sum(for_sus) / len(for_sus) if len(for_sus) > 0 else -1.0,
+            sum(against_sus) / len(against_sus) if len(against_sus) > 0 else -1.0,
+            sum(for_not_on_sus) / len(for_not_on_sus) if len(for_not_on_sus) > 0 else -1.0,
+            #PlayerRecord.single_round_callable_filtering_thing(been_sus, filter_cond)[1],
+            #PlayerRecord.single_round_callable_filtering_thing(for_sus, filter_cond)[1],
+            #PlayerRecord.single_round_callable_filtering_thing(against_sus, filter_cond)[1],
+            #PlayerRecord.single_round_callable_filtering_thing(for_not_on_sus, filter_cond)[1],
+            len(self.trim_property_list_to_before_round_n(self.hammers_thrown, round_num)),
+            votes_s_c[0],
+            *votes_s_c[1],
+            *votes_s_c[2]
+        )
+
 
     def to_json_string(self) -> str:
         """
@@ -1848,7 +1941,26 @@ class GameRecord(object):
             out_dict[kv[0]] = kv[1].simple_spy_probability()
         return out_dict
 
-
+    # noinspection PyTypeChecker
+    @property
+    def belief_state_json_logging(self) -> str:
+        """
+        why the hell cant i unpickle something in a different file wtf
+        :return:
+        """
+        out_dict = {
+            "nn_in": [],
+            "hsd_out": [],
+            "spies": [1 if p in self._spies else 0 for p in self._player_records.keys()]
+        }
+        round_no = 0
+        for tr in self._team_records.values():
+            this_nn = []
+            for p in self._player_records.values():
+                this_nn.append(p.single_round_padded_and_masked_sus_tuple(round_no))
+            out_dict["nn_in"].append(tuple(this_nn))
+            out_dict["hsd_out"].append(tuple(tr.public_belief_states_prior.values()))
+        return json.dumps(out_dict)
 
 
 
@@ -2448,6 +2560,17 @@ class NeuralNetworker(object):
     def __init__(self):
         # TODO: methods to load the neural networks
         pass
+
+
+
+def gamerecord_history_unpickler(res_path: Path) -> GameRecordHistory:
+    grh: GameRecordHistory = None
+    with open(res_path / "game_records.p", "rb") as p:
+        grh: GameRecordHistory = pickle.load(p)
+        p.close()
+    if grh is None:
+        raise FileNotFoundError("oh no")
+    return grh
 
 
 class rl18730(Bot):
@@ -3192,7 +3315,9 @@ class rl18730(Bot):
         #for k in [*self.team_records.keys()]:
         #    log_dict["teams"][k] = self.team_records[k].loggable_dict
 
-        self.log.debug(self.game_record.loggable_json_string)
+        #self.log.debug(self.game_record.loggable_json_string)
+
+        self.log.debug(self.game_record.belief_state_json_logging)
 
         rl18730._sabotage_chance_stats.add_sabotage_info(
             self.game_record.get_info_about_sabotages_from_spies_for_sabotage_records(
@@ -3236,3 +3361,5 @@ class rl18730(Bot):
         pass
 
 
+if __name__ == "__main__":
+    print("bruh")
