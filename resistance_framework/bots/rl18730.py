@@ -10,7 +10,7 @@ from tensorflow import keras
 from player import Bot, Player
 from game import State
 
-from typing import TypeVar, List, Dict, Set, Tuple, Iterable, FrozenSet, Union, NoReturn, Any, Callable
+from typing import TypeVar, List, Dict, Set, Tuple, Iterable, FrozenSet, Union, NoReturn, Any, Callable, ClassVar, Final
 
 from enum import Enum
 
@@ -1442,6 +1442,18 @@ class PlayerRecord(object):
             # of the list items are in the list of prior rounds
             return [p for p in prop_list if p[0] in prior_rounds]
 
+    _default_sus_tuple: ClassVar[Tuple[
+        float, float, float, float, float, int,
+        int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int
+    ]] = (
+        0.5, 0.5, 0.5, 0.5, 0.5, 0,
+        0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0
+    )
+    """The tuple that will be returned by the sus tuple creation functions if there's no data
+    to use to construct the tuple. It's a class variable, no need to give each instance of this class
+    its own self. version because that would defeat the whole point of making it a constant for all of them"""
 
     def get_padded_and_masked_sus_lists_multiple_rounds_for_player_record_trainer(
             self, round_num: int = -1
@@ -1454,23 +1466,23 @@ class PlayerRecord(object):
         rejected_teams_sus_levels, and sus_levels_of_non_hammer_teams_approved_whilst_not_on
         values, grouped per round, of all the rounds before the nth round.
 
-        Any missing values are padded with -1s.
+        Any missing values from the first 5 (the floats) are padded with 0.5 if there's no data.
+        The other ones are counts, so if there's nothing to count, that's a 0.
 
         :param round_num: nth round. Use -1 if we want all prior rounds.
-        :return: -1 padded list of (mission_teams_lead_sus_levels, missions_teams_been_on_sus_levels,
+        :return: 0.5 padded list of (mission_teams_lead_sus_levels, missions_teams_been_on_sus_levels,
         approved_teams_sus_levels, rejected_teams_sus_levels, sus_levels_of_non_hammer_teams_approved_whilst_not_on,
         hammers_thrown,
         teams with suspect counts voted for, teams with suspect counts voted against)
         values per round for all prior rounds.
-        If there is no value for that thing for the current round, that value is padded with a -1.
+        If there is no value for that thing for the current round, that value is padded with a 0.5 (first 5),
+        or 0 (no count).
         """
 
         prior_rounds: List[int] = self._game.get_prior_round_indices(round_num)
 
         if len(prior_rounds) == 0:
-            return [(-1.0, -1.0, -1.0, -1.0, -1.0, 0,
-                     0, 0, 0, 0, 0, 0, 0,
-                     0, 0, 0, 0, 0, 0, 0)]
+            return [PlayerRecord._default_sus_tuple]
 
         lead_sus: List[Tuple[int, float, int]] = \
             self.trim_property_list_to_before_round_n(self.mission_teams_lead_sus_levels, round_num)
@@ -1508,27 +1520,29 @@ class PlayerRecord(object):
             ]
         ] = []
 
+        l = b = f = a = n = 0.5
+        # default values for the lead sus, been sus, for sus, against sus, and for_not_on_sus values
+
         for r in prior_rounds:
-            l = b = f = a = n = -1.0 # TODO: replace this stuff with the sum(list stuff)/len(list stuff) values
             if l_more and lead_sus[l_cursor][0] == r:
-                l = lead_sus[l_cursor][1]
                 l_cursor += 1
+                l = sum([kv[1] for kv in lead_sus[0:l_cursor]])/l_cursor
                 l_more = l_cursor < len(lead_sus)
             if b_more and been_sus[b_cursor][0] == r:
-                b = been_sus[b_cursor][1]
                 b_cursor += 1
+                b = sum([kv[1] for kv in been_sus[0:b_cursor]]) / b_cursor
                 b_more = b_cursor < len(been_sus)
             if f_more and for_sus[f_cursor][0] == r:
-                f = for_sus[f_cursor][1]
                 f_cursor += 1
+                f = sum([kv[1] for kv in for_sus[0:f_cursor]]) / f_cursor
                 f_more = f_cursor < len(for_sus)
             if a_more and against_sus[a_cursor][0] == r:
-                a = against_sus[a_cursor][1]
                 a_cursor += 1
+                a = sum([kv[1] for kv in against_sus[0:a_cursor]]) / a_cursor
                 a_more = a_cursor < len(against_sus)
             if n_more and for_not_on_sus[n_cursor][0] == r:
-                n = for_not_on_sus[n_cursor][1]
                 n_cursor += 1
+                n = sum([kv[1] for kv in for_not_on_sus[0:n_cursor]]) / n_cursor
                 n_more = n_cursor < len(for_not_on_sus)
             if h_more and hammers_thrown[h_cursor] == r:
                 h_cursor += 1
@@ -1537,27 +1551,6 @@ class PlayerRecord(object):
             output_data.append((l, b, f, a, n, h_cursor, *votes_s_c[r][1], *votes_s_c[r][2]))
         return output_data
 
-    @staticmethod
-    def single_round_callable_filtering_thing(
-            filter_this: Collection[T],
-            filter_fun: Callable[[Collection[T]], T],
-            default_val: Tuple[Any, float] = (0, -1.0)
-    ) -> T:
-        """
-        A helper function for the single_round_padded_and_masked_sus_tuple method
-        :param filter_this: a collection we want to filter
-        :param filter_fun: the callable we're using to filter it
-        :param default_val: a value to return if nothing in the collection satisifies filter_fun
-        :return: the first element of filter_this that satisfied filter_fun, else default_val
-        """
-        filter_result = filter(filter_fun, filter_this)
-        if filter_result is None:
-            return default_val
-        res_list = list(filter_result)
-        if len(res_list) == 0:
-            return default_val
-        else:
-            return res_list[0]
 
     def single_round_padded_and_masked_sus_tuple(self, round_num: int = -1) -> \
         Tuple[
@@ -1583,11 +1576,7 @@ class PlayerRecord(object):
         priors = self._game.get_prior_round_indices()
 
         if len(priors) == 0:
-            return (
-                -1.0, -1.0, -1.0, -1.0, -1.0, 0,
-                0,0,0,0,0,0, 0,
-                0,0,0,0,0,0, 0
-            )
+            return PlayerRecord._default_sus_tuple
 
         round_index: int = list(reversed(priors))[0]
 
@@ -1606,20 +1595,13 @@ class PlayerRecord(object):
         votes_s_c: Tuple[int, Tuple[int, int, int, int, int, int, int], Tuple[int, int, int, int, int, int, int]] =\
             self.per_round_counts_of_teams_voted_for_and_against_with_suspect_counts[len(priors)-1]
 
-        filter_cond = lambda kvv: kvv[0] == round_index
-
         # noinspection PyTypeChecker
         return (
-            #PlayerRecord.single_round_callable_filtering_thing(lead_sus, filter_cond)[1],
-            sum(lead_sus)/len(lead_sus) if len(lead_sus) > 0 else -1.0,
-            sum(been_sus) / len(been_sus) if len(been_sus) > 0 else -1.0,
-            sum(for_sus) / len(for_sus) if len(for_sus) > 0 else -1.0,
-            sum(against_sus) / len(against_sus) if len(against_sus) > 0 else -1.0,
-            sum(for_not_on_sus) / len(for_not_on_sus) if len(for_not_on_sus) > 0 else -1.0,
-            #PlayerRecord.single_round_callable_filtering_thing(been_sus, filter_cond)[1],
-            #PlayerRecord.single_round_callable_filtering_thing(for_sus, filter_cond)[1],
-            #PlayerRecord.single_round_callable_filtering_thing(against_sus, filter_cond)[1],
-            #PlayerRecord.single_round_callable_filtering_thing(for_not_on_sus, filter_cond)[1],
+            sum(lead_sus)/len(lead_sus) if len(lead_sus) > 0 else 0.5,
+            sum(been_sus) / len(been_sus) if len(been_sus) > 0 else 0.5,
+            sum(for_sus) / len(for_sus) if len(for_sus) > 0 else 0.5,
+            sum(against_sus) / len(against_sus) if len(against_sus) > 0 else 0.5,
+            sum(for_not_on_sus) / len(for_not_on_sus) if len(for_not_on_sus) > 0 else 0.5,
             len(self.trim_property_list_to_before_round_n(self.hammers_thrown, round_num)),
             votes_s_c[0],
             *votes_s_c[1],
@@ -2024,7 +2006,6 @@ class GameRecordHistory(object):
 
 class PlayerRecordNNEstimator(object):
 
-    mask: float = -1.0
 
     def __init__(self, model: keras.Model):
         self._model: keras.Model = model
