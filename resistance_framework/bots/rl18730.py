@@ -2409,9 +2409,6 @@ class SpySabotageChanceStats(object):
         })
 
 
-
-
-
 class WinProbabilitiesTable(object):
     """
     A table of sorts used to get the probability of a resistance win happening from a given role allocation

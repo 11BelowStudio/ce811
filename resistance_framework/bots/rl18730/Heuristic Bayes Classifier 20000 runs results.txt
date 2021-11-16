@@ -1,0 +1,134 @@
+M:\MSc\CE811\CE811_lowe_rachel_m\venv\Scripts\python.exe M:/MSc/CE811/CE811_lowe_rachel_m/resistance_framework/competition.py 20000 bots/intermediates.py bots/rl18730.py bots/others1/clymily.py bots/others1/dkreuter.py bots/others1/dmq.py bots/others1/garboa.py bots/others1/grumpy.py bots/others1/hartbot.py bots/others1/invalidator.py bots/others1/mp.py bots/others1/opeth.py bots/others1/pands.py bots/others1/rebounder.py bots/others1/sceptic.py bots/others0/daniele.py bots/others0/mvbStock.py bots/others0/myplayers.py bots/others0/SoreLooser.py bots/others0/trusty.py
+2021-11-16 15:34:12.198536: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-11-16 15:34:12.199428: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+Running competition with 22 bots.
+[<class 'intermediates.Bounder'>, <class 'intermediates.Logicalton'>, <class 'intermediates.Simpleton'>, <class 'intermediates.Trickerton'>, <class 'rl18730.rl18730'>, <class 'clymily.Clymily'>, <class 'dkreuter.KreuterBot'>, <class 'dmq.Bot5Players'>, <class 'garboa.GarboA'>, <class 'grumpy.GrumpyBot'>, <class 'hartbot.HartBot'>, <class 'invalidator.Invalidator'>, <class 'mp.Magi'>, <class 'opeth.Opeth'>, <class 'pands.PandSBot'>, <class 'rebounder.Rebounder'>, <class 'sceptic.ScepticBot'>, <class 'daniele.IAmNotASpyPlayer'>, <class 'mvbStock.Rogue'>, <class 'myplayers.Bounder2'>, <class 'SoreLooser.SoreLooser'>, <class 'trusty.Trusty'>]
+2021-11-16 15:34:47.912593: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-11-16 15:34:47.913327: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-11-16 15:34:47.951450: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-11-16 15:34:47.952208: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-11-16 15:34:48.012496: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-11-16 15:34:48.013519: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-11-16 15:34:48.052506: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-11-16 15:34:48.053520: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-11-16 15:34:48.056708: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-11-16 15:34:48.058019: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-11-16 15:34:48.103484: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-11-16 15:34:48.104194: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-11-16 15:34:50.827363: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-11-16 15:34:50.828424: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-11-16 15:34:53.071884: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-11-16 15:34:53.072785: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(02%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(05%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(07%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(10%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(12%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(15%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(17%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(20%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(22%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(25%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(27%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(30%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(32%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(35%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(37%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(40%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(42%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(45%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(47%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(50%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(52%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(55%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(57%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(60%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(62%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(65%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(67%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(70%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(72%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(75%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(77%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(80%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(82%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(85%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(87%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(90%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(92%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(95%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(97%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(100%)
+
+SPIES: wins				(vote(Res,Spy),		 voted,		 selected,	 selection)
+  Rebounder        80.6% 	 97.9% 100.% 	 40.4% 		 40.4% 		 100.%
+  PandSBot         80.0% 	 100.% 82.0% 	 42.3% 		 39.4% 		 100.%
+  Invalidator      79.3% 	 82.7% 63.9% 	 44.6% 		 47.5% 		 100.%
+  Opeth            78.7% 	 98.1% 100.% 	 40.1% 		 39.6% 		 100.%
+  GarboA           77.9% 	 100.% 96.0% 	 42.8% 		 28.3% 		 100.%
+  Clymily          77.8% 	 97.8% 98.8% 	 41.3% 		 39.0% 		 100.%
+  Logicalton       77.3% 	 100.% 100.% 	 37.9% 		 38.7% 		 100.%
+  IAmNotASpyPlayer 76.4% 	 95.0% 100.% 	 37.1% 		 39.2% 		 100.%
+  ScepticBot       75.9% 	 74.7% 77.6% 	 39.9% 		 41.7% 		 100.%
+  Bounder2         75.5% 	 95.0% 100.% 	 39.3% 		 38.4% 		 100.%
+  Bot5Players      75.4% 	 99.3% 90.6% 	 42.7% 		 28.6% 		 100.%
+  Magi             75.3% 	 88.2% 69.8% 	 38.2% 		 32.2% 		 100.%
+  SoreLooser       74.6% 	 100.% 100.% 	 44.6% 		 49.2% 		 100.%
+  HartBot          74.3% 	 98.2% 100.% 	 40.7% 		 38.7% 		 100.%
+  rl18730          74.3% 	 75.9% 91.7% 	 41.4% 		 39.7% 		 100.%
+  Trickerton       73.8% 	 46.4% 78.0% 	 45.3% 		 47.7% 		 100.%
+  Bounder          73.4% 	 69.2% 56.7% 	 37.4% 		 39.6% 		 100.%
+  KreuterBot       72.5% 	 55.3% 100.% 	 39.2% 		 38.4% 		 100.%
+  Simpleton        70.3% 	 59.4% 69.0% 	 38.6% 		 40.7% 		 100.%
+  Rogue            68.7% 	 77.1% 67.9% 	 35.9% 		 37.9% 		 100.%
+  Trusty           65.4% 	 100.% 100.% 	 41.4% 		 39.2% 		 100.%
+  GrumpyBot        18.2% 	  0.0% 100.% 	 51.7% 		 52.2% 		 100.%
+RESISTANCE: wins			(vote(Res,Spy),		 voted,		 selected,	 selection)
+  Invalidator      38.6% 	 93.2% 65.2% 	 57.5% 		 60.5% 		 67.6%
+  Rebounder        37.2% 	 96.0% 51.4% 	 60.5% 		 60.0% 		 61.6%
+  Clymily          36.8% 	 70.0% 85.5% 	 52.9% 		 59.1% 		 75.9%
+  PandSBot         36.2% 	 84.6% 65.1% 	 56.0% 		 59.8% 		 58.7%
+  ScepticBot       36.2% 	 86.2% 68.2% 	 54.5% 		 60.7% 		 65.1%
+  GarboA           34.8% 	 82.0% 56.8% 	 54.1% 		 58.9% 		 53.6%
+  Bounder          34.5% 	 96.1% 51.7% 	 59.6% 		 59.1% 		 56.4%
+  Magi             34.0% 	 87.3% 58.1% 	 57.5% 		 59.8% 		 56.2%
+  Bounder2         33.5% 	 95.8% 47.5% 	 59.9% 		 58.9% 		 54.3%
+  Opeth            30.8% 	 83.0% 46.4% 	 59.1% 		 60.0% 		 47.9%
+  Logicalton       28.0% 	 100.% 33.1% 	 63.1% 		 57.5% 		 42.9%
+  SoreLooser       25.2% 	 75.7% 51.7% 	 60.6% 		 55.4% 		 41.6%
+  Simpleton        24.9% 	 100.% 32.6% 	 62.1% 		 57.6% 		 37.6%
+  KreuterBot       24.8% 	 96.9% 34.0% 	 63.0% 		 57.2% 		 43.0%
+  rl18730          23.6% 	 49.1% 78.1% 	 47.9% 		 58.1% 		 36.2%
+  Bot5Players      23.3% 	 85.6% 42.9% 	 56.3% 		 58.1% 		 34.9%
+  Trickerton       22.9% 	 65.9% 57.1% 	 54.8% 		 59.9% 		 41.0%
+  Rogue            22.4% 	 84.5% 40.4% 	 65.7% 		 57.0% 		 40.0%
+  HartBot          20.8% 	 33.3% 79.1% 	 48.4% 		 57.9% 		 39.3%
+  IAmNotASpyPlayer 18.6% 	 95.9%  3.6% 	 62.6% 		 54.9% 		 38.1%
+  Trusty           13.5% 	 50.3% 54.0% 	 49.2% 		 59.0% 		 29.2%
+  GrumpyBot         3.2% 	  0.0% 100.% 	 34.3% 		 58.0% 		 32.4%
+TOTAL
+  Rebounder        54.8% (e=1.43 n=4631)
+  Invalidator      54.5% (e=1.44 n=4604)
+  PandSBot         53.7% (e=1.44 n=4574)
+  Clymily          53.1% (e=1.46 n=4508)
+  ScepticBot       52.1% (e=1.48 n=4396)
+  GarboA           51.8% (e=1.44 n=4595)
+  Bounder          50.6% (e=1.47 n=4454)
+  Magi             50.4% (e=1.44 n=4620)
+  Bounder2         50.1% (e=1.43 n=4693)
+  Opeth            49.7% (e=1.46 n=4471)
+  Logicalton       47.5% (e=1.46 n=4505)
+  SoreLooser       45.1% (e=1.44 n=4611)
+  rl18730          44.1% (e=1.45 n=4519)
+  KreuterBot       44.0% (e=1.44 n=4569)
+  Bot5Players      43.8% (e=1.44 n=4539)
+  Simpleton        43.0% (e=1.43 n=4576)
+  Trickerton       42.9% (e=1.43 n=4578)
+  HartBot          42.1% (e=1.43 n=4560)
+  IAmNotASpyPlayer 41.9% (e=1.44 n=4496)
+  Rogue            41.4% (e=1.44 n=4478)
+  Trusty           34.9% (e=1.39 n=4495)
+  GrumpyBot         9.2% (e=0.84 n=4528)
+
+
+Process finished with exit code 0
