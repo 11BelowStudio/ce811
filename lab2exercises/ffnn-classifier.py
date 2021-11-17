@@ -1,4 +1,5 @@
 import pandas as pd
+import tensorflow.python.framework.ops
 
 from numpy import where
 from tensorflow import keras
@@ -27,6 +28,13 @@ print("Data loaded (shapes only)", inputs_train.shape, labels_train.shape, input
 import tensorflow as tf
 
 
+def bruh_metric(y_true: tf.Tensor, y_pred: tf.Tensor):
+
+    print("{} {} {} {}".format(y_true, type(y_true), y_true.value_index, y_true.shape))
+    print("{} {} {} {}".format(y_pred, type(y_pred), y_pred.value_index, y_pred.shape))
+    return tf.reduce_mean(tf.square(y_true - y_pred), axis=-1)
+
+
 num_inputs: int = 4 # has 4 inputs
     # inputs are in form of a 4-index 1D array.
 num_outputs: int = 3 # It needs 3 outputs because there are 3 types of flowers being categorised.
@@ -43,6 +51,7 @@ layer2: layers.Dense = layers.Dense(10, activation="tanh", input_shape=(10,))
 model.add(layer2)
 
 layer3: layers.Dense = layers.Dense(3, activation=tf.keras.activations.softmax, input_shape=(10,))
+
 model.add(layer3)
 
 
@@ -57,6 +66,8 @@ epochs = 200
 modelInfoString = "{} epochs, {} optimizer, {} eta".format(
     epochs, "adam" if using_adam else "sgd", eta
 )
+
+
 
 model.compile(
     #optimizer=keras.optimizers.Adam(0.01),
@@ -89,7 +100,7 @@ plt.grid()
 plt.show()
 
 
-model.save("ModelIris.h5", save_format="h5")
+#model.save("ModelIris.h5", save_format="h5")
 
 model_outputs = model(inputs_val)
 

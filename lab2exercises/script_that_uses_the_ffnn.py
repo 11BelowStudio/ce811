@@ -25,6 +25,9 @@ def getFlowerInfo(sLen: float, sWid: float , pLen: float, pWid: float) -> Tuple[
 
     modelOutput: np.ndarray = iris_model(flowerData).numpy()
 
+    print(type(modelOutput))
+    print(modelOutput)
+
     index_label: Tuple[int, str] = modelOutputToIndexAndLabel(modelOutput)
 
     return index_label[0], index_label[1], modelOutput
