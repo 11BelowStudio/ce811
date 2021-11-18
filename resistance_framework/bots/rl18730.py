@@ -3205,6 +3205,21 @@ class rl18730(Bot):
                     sus_level *= (1 - heuristic_suspicions[the_players[r]])
             self.suspicion_for_each_role_combo[rp] = sus_level
 
+        most_sus: Tuple[RoleAllocationEnum, float] = tuple(
+            *max(
+                (kv for kv in random.sample([*self.suspicion_for_each_role_combo.items()], 10) if kv[0] in self.the_other_role_combos),
+                key=lambda kv: kv[1]
+            )
+        )
+
+        most_sus_players: List[TPlayer] = most_sus[0].extract_sublist_from(self.game.players)
+
+        self.say(
+            "I believe that {} and {} are most likely to be spies, as those two are {}% likely to be the spies".format(
+                most_sus_players[0], most_sus_players[1], most_sus[1]
+            )
+        )
+
         # no need to bother normalizing the heuristic suspicions for our internal use
 
         #self.suspicion_for_each_role_combo[rp] = \
@@ -3228,6 +3243,8 @@ class rl18730(Bot):
             self.current_gamestate,
             self.temp_team_record.generate_teamrecord_from_data
         )
+
+
 
         pass
 
@@ -3269,13 +3286,30 @@ class rl18730(Bot):
         """Callback if another player sends a general free-form message to the
         channel.  This is passed in as a generic string that needs to be parsed.
 
+        In practice, if it hears anyone it doesn't like trying to speak
+        (ie one of the two players who it thinks are most likely to be spies)
+        it tells that sussy baka to better shut up.
+
+        Because it does not like hearing anything from a sussy baka.
+
         :param source:       Player sending the message.
         :param message:  Arbitrary string for the message sent.
         """
         if source in max(
             random.sample(self.the_other_role_combos, 6), key=lambda k: self.suspicion_for_each_role_combo[k]
         ).extract_sublist_from(self.game.players):
-            self.say("better shut up, sussy baka")
+            self.say(
+                random.sample(
+                    [
+                        "better shut up, {}, you sussy baka",
+                        "that's obviously what an imposter would say, isn't it, {}?",
+                        "guys I just saw {} vent",
+                        "WHEN THE {} IS SUS!!!!!",
+                        "hey {} that's cool and all but who asked?????",
+                        "wow it's {} aka the imposter from among us how does it feel to be sus?"
+                    ], 1
+                )[0].format(source)
+            )
         pass
 
     def onGameComplete(self, win: bool, spies: Set[TPlayer]) -> NoReturn:
@@ -3300,6 +3334,8 @@ class rl18730(Bot):
         :param win:          Boolean true if the Resistance won.
         :param spies:        Set of only the spies in the game.
         """
+
+
 
         self.game_record.end_game_update(win, spies)
 
