@@ -1750,7 +1750,7 @@ class GameRecord(object):
         """dict of {mission index: (sabotages/teamSize, suspect count)} for non-rejected missions"""
         out_dict: Dict[int, Tuple[float, int]] = {}
         for kv1 in (
-                kv for kv in self._all_missions_and_sabotages_with_teams_and_suspect_count.items() if kv[1][0] == -1
+                kv for kv in self._all_missions_and_sabotages_with_teams_and_suspect_count.items() if kv[1][0] != -1
         ):
             out_dict[kv1[0]] = (kv1[1][0]/kv1[1][1], kv1[1][2])
         return out_dict
@@ -1954,7 +1954,10 @@ class GameRecord(object):
                 p.single_round_padded_and_masked_sus_tuple(round_no) for p in self._player_records.values()
             )
             out_dict["nn_in"].append(tuple(this_nn))
-            out_dict["hsd_out"].append(tuple(tr.public_belief_states_prior.values()))
+            out_dict["hsd_out"].append(
+                tr.json_dumpable_individual_beliefs
+                # tuple(tr.public_belief_states_prior.values())
+            )
         return json.dumps(out_dict)
 
 
@@ -2554,14 +2557,6 @@ class NeuralNetworker(object):
 
 
 
-def gamerecord_history_unpickler(res_path: Path) -> GameRecordHistory:
-    grh: GameRecordHistory = None
-    with open(res_path / "game_records.p", "rb") as p:
-        grh: GameRecordHistory = pickle.load(p)
-        p.close()
-    if grh is None:
-        raise FileNotFoundError("oh no")
-    return grh
 
 
 class rl18730(Bot):
@@ -2595,14 +2590,14 @@ class rl18730(Bot):
             _win_probabilities_table: SpySabotageChanceStats = pickle.load(p)
             p.close()
 
-    _game_record_history: GameRecordHistory = GameRecordHistory()
-    """
-    Keeps track of player records
-    """
-    if os.path.exists(resources_file_path / "game_records.p"):
-        with open(resources_file_path / "game_records.p", "rb") as p:
-            _game_record_history: GameRecordHistory = pickle.load(p)
-            p.close()
+    #_game_record_history: GameRecordHistory = GameRecordHistory()
+    #"""
+    #Keeps track of player records
+    #"""
+    #if os.path.exists(resources_file_path / "game_records.p"):
+    #    with open(resources_file_path / "game_records.p", "rb") as p:
+    #        _game_record_history: GameRecordHistory = pickle.load(p)
+    #        p.close()
 
     def __init__(self, game: State, index: int, spy: bool):
         """Constructor called before a game starts.  It's recommended you don't
@@ -3205,18 +3200,16 @@ class rl18730(Bot):
                     sus_level *= (1 - heuristic_suspicions[the_players[r]])
             self.suspicion_for_each_role_combo[rp] = sus_level
 
-        most_sus: Tuple[RoleAllocationEnum, float] = tuple(
-            *max(
-                (kv for kv in random.sample([*self.suspicion_for_each_role_combo.items()], 10) if kv[0] in self.the_other_role_combos),
-                key=lambda kv: kv[1]
-            )
+        most_sus: RoleAllocationEnum = max(
+            self.the_other_role_combos,
+            key=lambda i: self.suspicion_for_each_role_combo[i]
         )
 
-        most_sus_players: List[TPlayer] = most_sus[0].extract_sublist_from(self.game.players)
+        most_sus_players: List[TPlayer] = most_sus.extract_sublist_from(self.game.players)
 
         self.say(
             "I believe that {} and {} are most likely to be spies, as those two are {}% likely to be the spies".format(
-                most_sus_players[0], most_sus_players[1], most_sus[1]
+                most_sus_players[0], most_sus_players[1], self.suspicion_for_each_role_combo[most_sus]
             )
         )
 
@@ -3344,7 +3337,9 @@ class rl18730(Bot):
 
         #self.log.debug(self.game_record.loggable_json_string)
 
-        self.log.debug(self.game_record.belief_state_json_logging)
+        self.log.debug(
+            self.game_record.belief_state_json_logging
+        )
 
         rl18730._sabotage_chance_stats.add_sabotage_info(
             self.game_record.get_info_about_sabotages_from_spies_for_sabotage_records(
@@ -3359,7 +3354,7 @@ class rl18730(Bot):
         )
 
         # noinspection PyTypeChecker
-        rl18730._game_record_history.add_records_from_game(self.game_record)
+        # rl18730._game_record_history.add_records_from_game(self.game_record)
 
         """
         self._sabotage_chance_stats.add_sabotage_info(
@@ -3376,9 +3371,11 @@ class rl18730(Bot):
             pickle.dump(rl18730._win_probabilities_table, p)
             p.close()
 
-        with open(resources_file_path/"game_records.p", "wb") as p:
-            pickle.dump(rl18730._game_record_history, p)
-            p.close()
+
+        #with open(resources_file_path/"game_records.p", "wb") as p:
+        #    pickle.dump(rl18730._game_record_history, p)
+        #    p.close()
+
 
 
         # for k in [*self.team_records.keys()]:
