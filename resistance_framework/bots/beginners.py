@@ -135,7 +135,7 @@ class CountingBot(Bot):
         most_sus: Set[TPlayer] = set(sorted(self.others(), key=lambda x: self.failed_missions_been_on[x])[-2:])
         """ The two most suspicious players (most failed missions) """
 
-        if most_sus.isdisjoint(team): # vote yes if those two are not in the mission
+        if most_sus.isdisjoint(team):  # vote yes if those two are not in the mission
             return True
         else:
             return False

@@ -3,7 +3,7 @@ import inspect
 import itertools
 
 from player import Bot
-from intermediate import Simpleton
+from intermediates import Simpleton
 
 
 __all__ = ['RandomCheater', 'LogicalCheater']
