@@ -1,0 +1,188 @@
+M:\MSc\CE811\CE811_lowe_rachel_m\venv\Scripts\python.exe M:/MSc/CE811/CE811_lowe_rachel_m/resistance_framework/competition.py 20000 bots/intermediates.py bots/rl18730.py bots/others1/clymily.py bots/others1/dkreuter.py bots/others1/dmq.py bots/others1/garboa.py bots/others1/grumpy.py bots/others1/hartbot.py bots/others1/invalidator.py bots/others1/mp.py bots/others1/opeth.py bots/others1/pands.py bots/others1/rebounder.py bots/others1/sceptic.py bots/others0/daniele.py bots/others0/mvbStock.py bots/others0/myplayers.py bots/others0/SoreLooser.py bots/others0/trusty.py
+2021-11-19 02:17:50.026049: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-11-19 02:17:50.026717: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-11-19 02:17:52.651216: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'nvcuda.dll'; dlerror: nvcuda.dll not found
+2021-11-19 02:17:52.651911: W tensorflow/stream_executor/cuda/cuda_driver.cc:326] failed call to cuInit: UNKNOWN ERROR (303)
+2021-11-19 02:17:52.663346: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: cseeproj08
+2021-11-19 02:17:52.663935: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: cseeproj08
+2021-11-19 02:17:52.664556: I tensorflow/core/platform/cpu_feature_guard.cc:142] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX AVX2
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+Running competition with 22 bots.
+[<class 'intermediates.Bounder'>, <class 'intermediates.Logicalton'>, <class 'intermediates.Simpleton'>, <class 'intermediates.Trickerton'>, <class 'rl18730.rl18730'>, <class 'clymily.Clymily'>, <class 'dkreuter.KreuterBot'>, <class 'dmq.Bot5Players'>, <class 'garboa.GarboA'>, <class 'grumpy.GrumpyBot'>, <class 'hartbot.HartBot'>, <class 'invalidator.Invalidator'>, <class 'mp.Magi'>, <class 'opeth.Opeth'>, <class 'pands.PandSBot'>, <class 'rebounder.Rebounder'>, <class 'sceptic.ScepticBot'>, <class 'daniele.IAmNotASpyPlayer'>, <class 'mvbStock.Rogue'>, <class 'myplayers.Bounder2'>, <class 'SoreLooser.SoreLooser'>, <class 'trusty.Trusty'>]
+2021-11-19 02:18:31.772227: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-11-19 02:18:31.772982: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-11-19 02:18:31.789166: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-11-19 02:18:31.789855: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-11-19 02:18:35.524605: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-11-19 02:18:35.525280: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-11-19 02:18:35.678808: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-11-19 02:18:35.679563: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-11-19 02:18:35.870230: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-11-19 02:18:35.871589: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-11-19 02:18:35.917541: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-11-19 02:18:35.918593: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-11-19 02:18:36.129169: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-11-19 02:18:36.130238: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-11-19 02:18:36.323918: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2021-11-19 02:18:36.325175: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+2021-11-19 02:18:38.520925: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'nvcuda.dll'; dlerror: nvcuda.dll not found
+2021-11-19 02:18:38.521747: W tensorflow/stream_executor/cuda/cuda_driver.cc:326] failed call to cuInit: UNKNOWN ERROR (303)
+2021-11-19 02:18:38.534445: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: cseeproj08
+2021-11-19 02:18:38.535175: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: cseeproj08
+2021-11-19 02:18:38.535896: I tensorflow/core/platform/cpu_feature_guard.cc:142] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX AVX2
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2021-11-19 02:18:38.632610: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'nvcuda.dll'; dlerror: nvcuda.dll not found
+2021-11-19 02:18:38.633566: W tensorflow/stream_executor/cuda/cuda_driver.cc:326] failed call to cuInit: UNKNOWN ERROR (303)
+2021-11-19 02:18:38.647059: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: cseeproj08
+2021-11-19 02:18:38.647722: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: cseeproj08
+2021-11-19 02:18:38.648568: I tensorflow/core/platform/cpu_feature_guard.cc:142] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX AVX2
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+..2021-11-19 02:18:45.620553: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'nvcuda.dll'; dlerror: nvcuda.dll not found
+2021-11-19 02:18:45.621206: W tensorflow/stream_executor/cuda/cuda_driver.cc:326] failed call to cuInit: UNKNOWN ERROR (303)
+2021-11-19 02:18:45.634395: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: cseeproj08
+2021-11-19 02:18:45.635065: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: cseeproj08
+2021-11-19 02:18:45.635854: I tensorflow/core/platform/cpu_feature_guard.cc:142] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX AVX2
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2021-11-19 02:18:45.731694: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'nvcuda.dll'; dlerror: nvcuda.dll not found
+2021-11-19 02:18:45.732380: W tensorflow/stream_executor/cuda/cuda_driver.cc:326] failed call to cuInit: UNKNOWN ERROR (303)
+2021-11-19 02:18:45.746807: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: cseeproj08
+2021-11-19 02:18:45.747579: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: cseeproj08
+2021-11-19 02:18:45.748265: I tensorflow/core/platform/cpu_feature_guard.cc:142] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX AVX2
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2021-11-19 02:18:45.848523: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'nvcuda.dll'; dlerror: nvcuda.dll not found
+2021-11-19 02:18:45.849208: W tensorflow/stream_executor/cuda/cuda_driver.cc:326] failed call to cuInit: UNKNOWN ERROR (303)
+2021-11-19 02:18:45.864252: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'nvcuda.dll'; dlerror: nvcuda.dll not found
+2021-11-19 02:18:45.2021-11-19 082:18:45.64763: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: cseeproj08
+864971: W tensorflow/stream_executor/cuda/cuda_driver.cc:326] failed call2 0to cuInit: UNKNOWN ERROR (303)
+21-11-19 02:18:45.865994: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: cseeproj08
+2021-11-19 02:18:45.867138: I tensorflow/core/platform/cpu_feature_guard.cc:142] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX AVX2
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2021-11-19 02:18:45.885186: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: cseeproj08
+2021-11-19 02:18:45.886023: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: cseeproj08
+2021-11-19 02:18:45.887221: I tensorflow/core/platform/cpu_feature_guard.cc:142] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX AVX2
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2021-11-19 02:18:45.979767: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'nvcuda.dll'; dlerror: nvcuda.dll not found
+2021-11-19 02:18:45.980707: W tensorflow/stream_executor/cuda/cuda_driver.cc:326] failed call to cuInit: UNKNOWN ERROR (303)
+2021-11-19 02:18:45.995002: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'nvcuda.dll'; dlerror: nvcuda.dll not found
+2021-11-19 02:18:45.995946: W tensorflow/stream_executor/cuda/cuda_driver.cc:326] failed call to cuInit: UNKNOWN ERROR (303)
+2021-11-19 02:18:45.998284: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: cseeproj08
+2021-11-19 02:18:45.999305: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: cseeproj08
+2021-11-19 02:18:46.000338: I tensorflow/core/platform/cpu_feature_guard.cc:142] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX AVX2
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2021-11-19 02:18:46.014959: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:169] retrieving CUDA diagnostic information for host: cseeproj08
+2021-11-19 02:18:46.016146: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:176] hostname: cseeproj08
+2021-11-19 02:18:46.017123: I tensorflow/core/platform/cpu_feature_guard.cc:142] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX AVX2
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+..o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(02%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(05%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(07%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(10%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(12%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(15%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(17%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(20%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(22%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(25%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(27%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(30%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(32%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(35%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(37%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(40%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(42%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(45%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(47%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(50%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(52%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(55%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(57%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(60%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(62%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(65%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(67%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(70%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(72%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(75%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(77%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(80%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(82%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(85%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(87%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(90%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(92%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(95%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(97%)
+....o....o....o....o....O....o....o....o....o....O....o....o....o....o....O....o....o....o....o....(100%)
+
+SPIES: wins				(vote(Res,Spy),		 voted,		 selected,	 selection)
+  Invalidator      79.9% 	 82.7% 63.8% 	 44.2% 		 47.2% 		 100.%
+  Rebounder        79.7% 	 97.7% 100.% 	 41.6% 		 39.7% 		 100.%
+  Clymily          78.3% 	 98.0% 99.2% 	 42.0% 		 38.6% 		 100.%
+  PandSBot         77.7% 	 100.% 83.3% 	 41.2% 		 39.1% 		 100.%
+  Opeth            77.6% 	 98.4% 100.% 	 39.8% 		 38.8% 		 100.%
+  Bounder2         77.2% 	 94.7% 100.% 	 39.7% 		 38.3% 		 100.%
+  IAmNotASpyPlayer 76.7% 	 95.1% 100.% 	 37.3% 		 39.0% 		 100.%
+  Bot5Players      76.5% 	 99.5% 90.2% 	 41.5% 		 33.2% 		 100.%
+  SoreLooser       75.7% 	 100.% 100.% 	 45.8% 		 48.8% 		 100.%
+  Logicalton       75.5% 	 100.% 100.% 	 38.6% 		 39.0% 		 100.%
+  HartBot          75.2% 	 98.5% 100.% 	 40.7% 		 38.1% 		 100.%
+  GarboA           74.8% 	 100.% 97.3% 	 44.2% 		 26.4% 		 100.%
+  Magi             73.8% 	 88.3% 70.2% 	 38.1% 		 31.7% 		 100.%
+  rl18730          73.7% 	 77.9% 91.7% 	 41.4% 		 39.7% 		 100.%
+  ScepticBot       73.5% 	 73.8% 78.7% 	 39.7% 		 39.8% 		 100.%
+  Bounder          72.9% 	 70.2% 57.2% 	 37.8% 		 39.6% 		 100.%
+  Trickerton       72.6% 	 46.8% 78.8% 	 45.7% 		 47.1% 		 100.%
+  KreuterBot       71.1% 	 53.9% 100.% 	 39.8% 		 37.0% 		 100.%
+  Simpleton        70.0% 	 59.5% 69.5% 	 38.9% 		 39.9% 		 100.%
+  Rogue            68.8% 	 76.7% 68.7% 	 37.1% 		 38.7% 		 100.%
+  Trusty           63.2% 	 100.% 100.% 	 40.1% 		 38.8% 		 100.%
+  GrumpyBot        15.4% 	  0.0% 100.% 	 51.9% 		 51.6% 		 100.%
+RESISTANCE: wins			(vote(Res,Spy),		 voted,		 selected,	 selection)
+  Invalidator      38.5% 	 93.2% 65.9% 	 56.5% 		 59.9% 		 66.8%
+  Clymily          37.3% 	 70.1% 85.7% 	 52.9% 		 59.6% 		 75.9%
+  ScepticBot       36.6% 	 86.4% 67.3% 	 55.8% 		 60.2% 		 65.3%
+  PandSBot         36.1% 	 85.3% 64.9% 	 56.2% 		 59.0% 		 58.7%
+  Magi             35.5% 	 87.4% 58.2% 	 57.8% 		 60.1% 		 58.3%
+  Rebounder        34.6% 	 95.4% 50.8% 	 60.3% 		 59.3% 		 60.2%
+  Bounder          33.9% 	 95.6% 51.6% 	 60.6% 		 58.8% 		 55.1%
+  Bounder2         33.7% 	 95.8% 48.0% 	 60.6% 		 58.7% 		 54.6%
+  GarboA           32.4% 	 81.6% 56.7% 	 54.2% 		 58.2% 		 51.3%
+  rl18730          31.8% 	 68.3% 77.6% 	 51.6% 		 59.0% 		 50.9%
+  Opeth            29.9% 	 83.0% 46.6% 	 59.2% 		 59.6% 		 47.3%
+  Logicalton       29.2% 	 100.% 33.3% 	 64.0% 		 58.3% 		 44.3%
+  Simpleton        28.1% 	 100.% 32.4% 	 63.1% 		 58.3% 		 39.0%
+  KreuterBot       26.1% 	 96.9% 32.4% 	 63.9% 		 57.4% 		 44.2%
+  SoreLooser       26.0% 	 74.3% 51.6% 	 60.5% 		 55.7% 		 41.8%
+  Bot5Players      24.0% 	 82.6% 43.1% 	 55.7% 		 58.7% 		 35.3%
+  Rogue            23.4% 	 83.0% 40.5% 	 66.2% 		 56.7% 		 41.7%
+  Trickerton       22.7% 	 65.1% 56.3% 	 54.2% 		 59.8% 		 38.7%
+  HartBot          21.8% 	 32.3% 78.7% 	 49.2% 		 59.6% 		 39.1%
+  IAmNotASpyPlayer 19.4% 	 95.4%  4.0% 	 62.8% 		 54.4% 		 37.0%
+  Trusty           14.6% 	 51.2% 53.7% 	 49.6% 		 59.2% 		 28.0%
+  GrumpyBot         3.6% 	  0.0% 100.% 	 34.4% 		 58.9% 		 33.9%
+TOTAL
+  Invalidator      54.9% (e=1.45 n=4504)
+  Clymily          53.8% (e=1.43 n=4655)
+  PandSBot         53.1% (e=1.45 n=4569)
+  Rebounder        52.3% (e=1.45 n=4582)
+  Bounder2         51.8% (e=1.45 n=4583)
+  ScepticBot       51.7% (e=1.46 n=4490)
+  Magi             50.6% (e=1.47 n=4441)
+  Opeth            49.4% (e=1.46 n=4483)
+  Bounder          49.2% (e=1.44 n=4606)
+  GarboA           49.0% (e=1.45 n=4538)
+  rl18730          48.3% (e=1.43 n=4661)
+  Logicalton       47.5% (e=1.46 n=4480)
+  SoreLooser       45.7% (e=1.45 n=4552)
+  Bot5Players      45.4% (e=1.46 n=4470)
+  Simpleton        45.0% (e=1.44 n=4560)
+  KreuterBot       44.5% (e=1.44 n=4554)
+  HartBot          43.1% (e=1.43 n=4608)
+  Trickerton       42.4% (e=1.44 n=4539)
+  IAmNotASpyPlayer 42.2% (e=1.44 n=4498)
+  Rogue            41.8% (e=1.43 n=4580)
+  Trusty           33.8% (e=1.38 n=4507)
+  GrumpyBot         8.3% (e=0.80 n=4540)
+
+
+Process finished with exit code 0

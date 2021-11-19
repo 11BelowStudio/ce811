@@ -3,16 +3,16 @@ import os
 import pickle
 import random
 from collections import Collection
-from itertools import count
-
-from logging import INFO
 
 from tensorflow import keras
 
+import numpy as np
+
 from player import Bot, Player
+
 from game import State
 
-from typing import TypeVar, List, Dict, Set, Tuple, Iterable, FrozenSet, Union, NoReturn, ClassVar, Callable
+from typing import TypeVar, List, Dict, Set, Tuple, Iterable, FrozenSet, Union, NoReturn, ClassVar
 
 from enum import Enum
 
@@ -28,12 +28,10 @@ T = TypeVar("T")
 
 resources_file_path: Path = Path().cwd()/"bots\\rl18730"
 """
-A file path for resources for this bot
-USAGE:
-    with open(resources_file_path/"filename",etc) as f:
-        file stuff goes here
-        f.close()
-        
+A file path for resources for this bot, relative to the main competition script you're
+(probably) running this from.
+
+YOU NEED TO EDIT THIS IF YOU'RE NOT PUTTING THIS AND ITS RESOURCES FOLDER IN A `bots` SUBFOLDER!
 
 """
 
@@ -63,68 +61,6 @@ NN_T_INPUTS = Tuple[NN_5INPUTS, ...]
 And this is what we put into the neural network
 It's a tuple holding all of the per-timestep NN_5INPUTS values we have calculated
 '"""
-
-
-"""
-Scrap that current stuff, taking another look at the DeepRole paper.
-
-public game tree is a history of third-person observations, o ∈ O(h), instead of just actions.
-    public actions
-        * nominations?
-        * sabotages?
-        * votes?
-    observable consequences of actions
-        * how did the vote affect the outcome?
-        * overall win/loss?
-        
-we maintain a human-interpretable joint posterior belief b(ρ|h) over the initial assignment of roles ρ.
-ρ represents a full assignment of roles to players (the result of the initial
-chance action) – so our belief b(ρ|h) represents the joint probability that each player has the role
-specified in ρ, given the observed actions in the public game tree.
-
-    h given p
-    
-    p(p|h) = p(p1 ^ p2 ^ p3 ^ p4 ^ p5|h)
-    
-    p(h|p) = 1
-    
-    p(p|h) = p(h|p) * p(p)/p(h)
-    
-    
-note: would need to zero the probability of any outcome logically inconsistent with the game tree.
-
-
-
-neural network:
-    (proposer, public belief values for this gamestate)
-    -> 2 dense layers (15(?))
-    -> win layer (10)
-        win(role(p))
-            Probability of a resistance win for each role assignment at this gamestate(?)
-    -> probability-weighted values for each info set
-        5 * 2 ([isRes, isSpy] for each player)
-
-
-
-While it’s possible to estimate these values using a generic feed-
-forward architecture, it may cause lower sample efficiency, require longer training time, or fail
-to achieve a low loss. We design an interpretable custom neural network architecture that takes
-advantage of restrictions imposed by the structure of many hidden role games. Our network feeds
-a one-hot encoded vector of the proposer player i and the belief vector b into two fully-connected
-hidden layers of 80 ReLU units. These feed into a fully-connected win probability layer with sigmoid
-activation. This layer is designed to take into account the specific structure of V , respecting the binary
-nature of payoffs in Avalon (players can only win or lose). It explicitly represents the probability of a
-Resistance win (~w = P(win|ρ)) for each assignment ρ
-
-
-
-
-
-
-
-
-"""
-
 
 class RoleAllocationEnum(Enum):
     """An enumeration for each possible permutation of role allocations.
@@ -172,7 +108,6 @@ class RoleAllocationEnum(Enum):
         :return: the RoleAllocationEnum which that string describes.
         """
         return RoleAllocationEnum(tuple(True if n == "1" else False for n in jsoned_string))
-
 
 class GamestateTree(object):
     """
@@ -382,6 +317,16 @@ class GamestateTree(object):
         return (round_id + 2) // 3, -round_id % 3, nom
 
     @classmethod
+    def missions_left_from_index(cls, ind: int) -> int:
+        """
+        Returns how many missions are left from the current index.
+        :param ind: the gamestate index we are trying to decode.
+        :return: sum of the resistance wins and spy wins (aka, the mission number)
+        """
+        rw, sw, noms = GamestateTree.decode_gamestate_index(ind)
+        return 25 - ((rw + sw)*5) - noms
+
+    @classmethod
     def get_gstnode_from_index(cls, index: int) -> "GamestateTree.GamestateTreeNode":
         """
         Obtain the gamestate node at the given index. If you don't know what index you want,
@@ -470,69 +415,6 @@ try:
     delattr(GamestateTree, "step")
 except Exception:
     pass
-
-
-class MCTSTree(object):
-    """
-    A monte carlo search tree, that uses the basic tree structure of the above gamestatetree stuff,
-    and is intended to work out the likelihood of each outcome from each state in that tree
-    """
-
-    class MCTSNode(object):
-        """A node in this MCTS tree"""
-
-        def __init__(self, state_index: int):
-            self._index: int = state_index
-            self._res_wins_from_node: int = 0
-            self._sims_from_node: int = 0
-
-        @property
-        def n_index(self) -> int:
-            """The gamestatetree index of this node"""
-            return self._index
-
-        @property
-        def n_outcomes(self) -> Dict[str, int]:
-            """Returns the indices of the nodes that could be the outcomes for this node
-            :return: dict with "reject", "pass", and "fail" node indices"""
-            gs_node: GamestateTree.GamestateTreeNode = GamestateTree.get_gstnode_from_index(self._index)
-            return {"reject": gs_node.voteFailedChild,
-                    "pass": gs_node.missionPassedChild,
-                    "fail": gs_node.missionFailedChild}
-
-        @property
-        def res_wins(self) -> int:
-            """How many times the resistance won from this node"""
-            return self._res_wins_from_node
-
-        @property
-        def spy_wins(self) -> int:
-            """How many times the spies won from this node"""
-            return self._sims_from_node - self._res_wins_from_node
-
-        @property
-        def sims(self) -> int:
-            """How many times simulations have been run with this node"""
-            return self._sims_from_node
-
-        def ran_simulation(self, resistance_win: bool) -> NoReturn:
-            """
-            Call this to update the node with new simulation info after reaching the end of a simulation
-            :param resistance_win: whether or not the resistance won
-            :return: true if they won, false otherwise.
-            """
-            self._sims_from_node += 1
-            if resistance_win:
-                self._res_wins_from_node += 1
-
-    def __init__(self):
-        """Attempts to initialize the MCTS tree"""
-
-        self._mcts_tree: Dict[int, "MCTSTree.MCTSNode"] = {}
-        """Dictionary of MCTS nodes"""
-
-        for i in GamestateTree.get_all_non_terminal_gamestates_indices():
-            self._mcts_tree[i] = MCTSTree.MCTSNode(i)
 
 
 class TeamRecord(object):
@@ -787,8 +669,6 @@ class TeamRecord(object):
         # noinspection PyTypeChecker
         info_dict["leader"] = tuple(default_leader_array)
 
-        #info_dict["leader"] = (self.leader.index, self._prior_predicted_spy_probabilities[self.leader])
-
         info_dict["beliefs_prior"] = self.json_dumpable_public_belief_states(False)
 
         info_dict["beliefs_latter"] = self.json_dumpable_public_belief_states(True)
@@ -810,16 +690,9 @@ class TeamRecord(object):
         # noinspection PyTypeChecker
         info_dict["suspects"] = tuple(self._suspect_counts.values())
 
-        #for p in self.team:
-        #    info_dict["team"][p.index] = info_dict["p{}".format(p.index)]
-        #{p: self._prior_predicted_spy_probabilities[p] for p in self.team}
-
         info_dict["sabotaged"] = self._sabotages
 
-        # info_dict["players"] = self.json_dumpable_individual_beliefs
-
         return info_dict
-
 
 
 class TempTeamRecord(object):
@@ -831,6 +704,7 @@ class TempTeamRecord(object):
     """
 
     def __init__(self):
+        """Initializes this with empty values"""
         self.team: Tuple[TPlayer, ...] = ()
         # noinspection PyTypeChecker
         self.leader: TPlayer = None
@@ -891,7 +765,7 @@ class TempTeamRecord(object):
         """
         Adds the current spy probabilities (worked out heuristically) and the suspect counts dict to the team record info
         :param spy_probs_dict: relative probability of each player being spy (individually)
-
+        :param sus_counts_dict: how many times that this player has been on a mission that got sabotaged.
         :return: nothing
         """
         self.latter_player_spy_probabilities = spy_probs_dict.copy()
@@ -943,19 +817,15 @@ class PlayerRecord(object):
         """
         Constructor
         :param p: the player we're keeping an eye on
+        :param game: the GameRecord for the game that this PlayerRecord was in
+        (which holds the common stats that apply to each PlayerRecords but only in a given game,
+        instead of having to waste memory storing copies of the identical numbers in each player)
         """
         self._p: TPlayer = p
         """Who this player is"""
 
         self._game: "GameRecord" = game
-
-        #self._all_missions_and_sabotages_with_teams_and_suspect_count: Dict[int, Tuple[int, int, int]] = {}
-        """
-        Dictionary of mission IDs with sabotage counts and also suspect counts.
-        (ID, sabotage count, suspect count)
-        Missions identified via GameState_Tree indices
-        if sabotage is -1, that means the team was rejected.
-        """
+        """The"""
 
         self._missions_lead: List[int] = []
         """
@@ -979,7 +849,10 @@ class PlayerRecord(object):
 
         # noinspection PyTypeChecker
         self._is_spy: bool = None
-        """IMPORTANT: DO NOT GIVE THIS A VALUE UNTIL KNOWN, FOR SURE, WHETHER THIS PLAYER WAS A SPY"""
+        """
+        IMPORTANT: DO NOT GIVE THIS A VALUE UNTIL KNOWN, FOR SURE, WHETHER THIS PLAYER WAS A SPY
+        (used for generating training data etc)
+        """
 
     def post_round_update(self, index: int, was_leader: bool,was_on_team: bool, voted_for_team: bool) -> NoReturn:
         """
@@ -990,8 +863,6 @@ class PlayerRecord(object):
         :param voted_for_team: true if this player voted for the team.
         :return: nothing.
         """
-
-        #self._all_missions_and_sabotages_with_teams_and_suspect_count[index] = (sab, team_size, suspect_count)
 
         if was_leader:
             self._missions_lead.append(index)
@@ -1068,7 +939,6 @@ class PlayerRecord(object):
             for kv in self._game.all_non_rejected_missions_sabotage_count_and_suspect_count.items()
             if kv[0] in self._missions_lead
         )
-
 
     @property
     def rejected_missions_lead(self) -> List[Tuple[int, int]]:
@@ -1266,31 +1136,34 @@ class PlayerRecord(object):
             * tuple with the normalized number of times the agent has voted against a team with those suspect counts
                 (indexed to suspect count, 0-5, all 5+ suspect counts sent to index 5)
         These values will be normalized according to the highest possible value for each of them.
-        0 - any mission can end with suspect count of 0 -> game can be up to 25 nominations long -> divided by 25
-        1, 2 -> anything after first mission can end with suspect count of 1 or 2 ->
-            first turn's 5 nominations can't do this -> divided by 25-5 = 20
-        3, 4, 5+ -> achievable as soon as second mission ends (if first 2 sabotaged) ->
-            10 potential nominations in those two turns can't do this -> divided by 25-10 = 15
+        0, 1, 2 - any mission can end with suspect count of 0, 1, or 2 ->
+            game can be up to 25 nominations long -> divided by (up to) 25
+        3, 4, 5+ -> anything after first mission can end with suspect count of 3, 4, or 5(+) ->
+            first turn's 5 nominations can't do this -> divided by divided by (up to) 25-5 = 20
         """
         for_suspect_counts: List[int] = [0, 0, 0, 0, 0, 0]
         against_suspect_counts: List[int] = [0, 0, 0, 0, 0, 0]
-        for_votes: List[Tuple[int, float, int]] = self.teams_approved
-        against: List[Tuple[int, float, int]] = self.teams_rejected
-        for_cursor = against_cursor = 0
-        for_len = len(for_votes)
-        for_not_done = for_cursor < for_len
-        against_len = len(against)
-        against_not_done = against_cursor < against_len
+
+        mission_numbers: List[int] = self._game.get_prior_round_indices(-1)
+
+        #so_far: List[int] = [f[0] for f in for_votes] + [a[1] for a in against]
+
+        mission_numbers.append(
+            self._game.next_gamestate_id
+        )
 
         # an inline function to get the data from the suspect count lists,
         # normalize them, and stick that normalized data into a tuple.
         def suspect_count_normalizer_and_tupler(
-                count_list: List[int]
+                count_list: List[int], missions_left: int
         ) -> Tuple[float, float, float, float, float, float]:
             return (
-                count_list[0]/25,
-                count_list[1]/20, count_list[2]/20,
-                count_list[3]/15, count_list[4]/15, count_list[5]/15
+                abs(count_list[0]/max(abs(missions_left-25), 1)),
+                abs(count_list[1]/max(abs(missions_left-25), 1)),
+                abs(count_list[2]/max(abs(missions_left-25), 1)),
+                abs(count_list[3]/max(abs(missions_left-20), 1)),
+                abs(count_list[4]/max(abs(missions_left-20), 1)),
+                abs(count_list[5]/max(abs(missions_left-20), 1))
             )
 
         # noinspection PyTypeChecker
@@ -1299,26 +1172,29 @@ class PlayerRecord(object):
             Tuple[float, float, float, float, float, float],
             Tuple[float, float, float, float, float, float]
         ]] = []
-        for i in range(for_len + against_len):
-            if for_not_done and for_votes[for_cursor][0] == i:
-                for_suspect_counts[min(for_votes[for_cursor][2], 5)] += 1
-                for_cursor += 1
-                for_not_done = for_cursor < for_len
-            elif against_not_done and against[against_cursor][0] == i:
-                against_suspect_counts[min(against[against_cursor][2], 5)] += 1
-                against_cursor += 1
-                against_not_done = against_cursor < against_len
+
+
+        for kvv in self._game.all_missions_with_sabotages_and_suspect_counts.items():
+            sus_count: int = kvv[1][1]
+            if sus_count > 5:
+                sus_count = 5
+            index: int = kvv[0]
+            missions_left: int = GamestateTree.missions_left_from_index(index)
+
+            if index in self._teams_approved:
+                for_suspect_counts[sus_count] += 1
+            elif index in self.teams_rejected:
+                against_suspect_counts[sus_count] += 1
 
             result_list.append(
                 (
-                    i,
-                    suspect_count_normalizer_and_tupler(for_suspect_counts),
-                    suspect_count_normalizer_and_tupler(against_suspect_counts)
+                    index,
+                    suspect_count_normalizer_and_tupler(for_suspect_counts, missions_left),
+                    suspect_count_normalizer_and_tupler(against_suspect_counts, missions_left)
                 )
             )
 
         return result_list
-
 
     @property
     def hammer_votes(self) -> List[Tuple[int, bool]]:
@@ -1382,27 +1258,15 @@ class PlayerRecord(object):
         :return: a float indicating how suspicious this player currently is.
         If there's no data yet, their sus level is 0.5
         If they have rejected a hammer vote, their sus level is 1
-        otherwise,
-        (
-            (sabotages on lead missions/4) +
-            sabotages on attended missions +
-            (sabotages on missions not on but voted for/4)
-        ) / ((lead/4) + attended + (not on but voted for/4))
+        otherwise, it's just
+            total number of sabotages on missions that this player has been on/number of missions been on
         """
-        # TODO more refined calculations of suspiciousness?
-        #  Could try to use some neural networks/bayesian belief stuff/etc.
-        #  maybe factoring in votes?
 
         if lookahead:
             if lookahead_info is None:
                 lookahead = False  # aborting the lookahead if we don't know anything about the lookahead
 
-        #print([*self._all_missions_and_sabotages_with_teams.keys()])
-        #print([*self._all_missions_and_sabotages_with_teams.keys()][0:everything_before_round])
-
         all_prior_rounds: List[int] = self._game.get_prior_round_indices(everything_before_round)
-
-        #print(all_prior_rounds)
 
         if len(all_prior_rounds) == 0 and not lookahead:
             return 0.5  # 0.5 suspicion if no data (and not looking ahead at new data)
@@ -1412,48 +1276,19 @@ class PlayerRecord(object):
         if lookahead and lookahead_info.hammer and not lookahead_info.voted_for:
             return 1.0  # if we're looking ahead, and we're predicting a no vote for a hammer, that's sus
 
-        lead_sus: List[float] = list(m[1] for m in self.mission_teams_lead_sus_levels if m[0] in all_prior_rounds)
         been_on_sus: List[float] = list(m[1] for m in self.mission_teams_been_on_sus_levels if m[0] in all_prior_rounds)
-
-        not_on_voted_sus: List[float] =\
-            list(m[1] for m in self.sus_levels_of_non_hammer_teams_approved_whilst_not_on if m[0] in all_prior_rounds)
 
         if lookahead and lookahead_info.sabs != -1:
             lookahead_sus: float = lookahead_info.sabs / lookahead_info.team_size
-            if lookahead_info.is_leader:
-                lead_sus.append(lookahead_sus)
             if lookahead_info.is_on:
                 been_on_sus.append(lookahead_sus)
-            elif lookahead_info.voted_for:
-                not_on_voted_sus.append(lookahead_sus)
 
-        has_lead_missions: bool = False  # len(lead_sus) > 0
         has_been_on_missions: bool = len(been_on_sus) > 0
-        voted_for_missions_not_on: bool = False  # len(not_on_voted_sus) > 0
 
-        # voted_for_sus: List[float] = [m[1] for m in self.approved_teams_sus_levels if m[0] in all_prior_rounds]
-        # voted_against_sus: List[float] = [m[1] for m in self.rejected_teams_sus_levels if m[0] in all_prior_rounds]
-
-        # total_concluded_missions_voted_on: int = len(voted_for_sus) + len(voted_against_sus)
-
-        if has_lead_missions or has_been_on_missions or voted_for_missions_not_on:
-            lead_len = len(lead_sus)
-            been_len = len(been_on_sus)
-            voted_len = len(not_on_voted_sus)
-            return min(
-                #(sum(lead_sus)/4) + (sum(been_on_sus)) + (sum(not_on_voted_sus)/4) /
-                #(lead_len/4 + been_len + voted_len/4)
-                sum(been_on_sus) / been_len
-                , 1.0)
-            #  return (sum(lead_sus) * max(1,lead_len)) + (sum(been_on_sus) * max(1, been_len)) / (lead_len + been_len) * (max(1, lead_len) * max(1, been_len))
+        if has_been_on_missions:
+            return min(sum(been_on_sus) / len(been_on_sus), 1.0)
         else:
             return 0.5
-        #elif total_concluded_missions_voted_on > 0:
-        #    for_against_sus: float = max(
-        #        (
-        #                (sum(voted_for_sus) * len(voted_for_sus)) - (sum(voted_against_sus) * len(voted_against_sus))
-        #        ) / total_concluded_missions_voted_on, 0)
-        #    return for_against_sus #  0.25
 
     @property
     def get_info_about_approved_missions_this_player_was_on(self) -> List[Tuple[int, float, int, bool]]:
@@ -1634,8 +1469,6 @@ class PlayerRecord(object):
             Tuple[float, float, float, float, float, float]
         ] = self.per_round_counts_of_teams_voted_for_and_against_with_suspect_counts_normalized[len(priors)-1]
 
-
-
         # noinspection PyTypeChecker
         return (
             sum(l[1] for l in lead_sus)/len(lead_sus) if len(lead_sus) > 0 else 0.5,
@@ -1648,7 +1481,7 @@ class PlayerRecord(object):
             *votes_s_c[2]
         )
 
-
+    @property
     def to_json_string(self) -> str:
         """
         Turns the important data from this object into a json string
@@ -1669,6 +1502,16 @@ class GameRecord(object):
     before getting it in JSON loggable form,
     also making it easier to update the SpySabotageChanceStats object
     after the end of the game.
+
+    Also I'm holding the logic that looks at the game data, and produces the
+    info about the probabilities of each player being a spy in here.
+
+    Why?
+
+    Because the player needs to go through the GameRecord to get the not entirely
+    disorganized stats that are used to calculate the likelihood of everyone being
+    a spy, so it would have to go through this anyway to begin calculating the
+    funny number, so why not just get the funny number itself directly from here?
     """
 
     log: ClassVar[logging.Logger] = logging.getLogger("rl18730.GameRecord")
@@ -1683,6 +1526,15 @@ class GameRecord(object):
         except IOError:
             pass
 
+    big_brain_time: keras.Model = keras.models.load_model(resources_file_path/"rl18730_nn.h5")
+    """
+    yeah, it's big brain time.
+    
+    Or, in other words, it's the neural network that is used to get some proper big brain predictions
+    about who's who.
+    
+    This will either work really well, or really badly.
+    """
 
     def __init__(self, players: List[TPlayer]):
         self._team_records: Dict[int, TeamRecord] = {}
@@ -1697,8 +1549,10 @@ class GameRecord(object):
         """
 
         self._player_records: Dict[TPlayer, PlayerRecord] = {}
+        self._suspicion_dict: Dict[TPlayer, float] = {}
         for p in players:
             self._player_records[p] = PlayerRecord(p, self)
+            self._suspicion_dict[p] = 0.5
 
         self._all_missions_and_sabotages_with_teams_and_suspect_count: Dict[int, Tuple[int, int, int]] = {}
         """
@@ -1713,7 +1567,6 @@ class GameRecord(object):
         self._win: bool = None
         """This is set to 'true' if resistance won, set to 'False' if the spies won."""
 
-
     def notify_about_spies(self, spies: Set[TPlayer]) -> NoReturn:
         """Call this when we know who the spies are"""
         self._spies = spies
@@ -1724,8 +1577,20 @@ class GameRecord(object):
             self, gs: int, leader: TPlayer, team: Collection[TPlayer], voted_for_team: FrozenSet[TPlayer],
             sabotages: int, suspects_in_team: int
     ) -> NoReturn:
+        """
+        Called after the end of a mission, to update all the player records.
+        :param gs: gamestate (index)
+        :param leader: who's the leader?
+        :param team: who was on the team?
+        :param voted_for_team: which players voted for the team?
+        :param sabotages: how many times was the mission sabotaged? (-1 if no sabotages)
+        :param suspects_in_team: sum of the suspicion levels for people in the team
+        :return: Nothing.
+        """
+        all_players: List[TPlayer] = [*self._player_records.keys()]
+        # this is a mystery tool that'll help us later.
 
-        for p in self._player_records.keys():
+        for p in all_players:
             self._player_records[p].post_round_update(
                 gs,
                 p == leader,
@@ -1738,6 +1603,36 @@ class GameRecord(object):
             len(team),
             suspects_in_team
         )
+
+        big_brain_sus_counts: List[float] = self._yeah_its_big_brain_time
+
+        for i in range(len(all_players)):
+            self._suspicion_dict[all_players[i]] = big_brain_sus_counts[i]
+
+    @property
+    def _yeah_its_big_brain_time(self) -> List[float]:
+        """
+        YEAH, IT'S BIG BRAIN TIME.
+
+        Basically, it obtains the neural network inputs from each of the player records,
+        gets the neural network to process them,
+        and then returns it in a list of player suspicion levels
+        (indexed the same as the players in the player_records keys,
+        and in Python those are always ordered in insertion order,
+        so I can just return that as a list of floats from this
+        and it'll still be of some use)
+
+        Big brain moment.
+
+        :return: List of the individual suspicion probabilities of each player being a spy,
+        calculated by the neural network, indexed same as the player records keys.
+        """
+
+        return GameRecord.big_brain_time(
+            np.array(
+                [p.single_round_padded_and_masked_sus_tuple() for p in self._player_records.values()]
+            )
+        ).numpy().T[0].tolist()
 
     def add_teamrecord_to_records(self, gs: int, tr: TeamRecord) -> NoReturn:
         """
@@ -1758,6 +1653,21 @@ class GameRecord(object):
         """
         self._win = win
         self.notify_about_spies(spies)
+
+    def get_suspect_count_from_mission(self, mission_gs: int) -> int:
+        return self._all_missions_and_sabotages_with_teams_and_suspect_count[mission_gs][2]
+
+    @property
+    def next_gamestate_id(self) -> int:
+        """obtains the ID of the current predicted next gamestate that will be reached"""
+        last_prior: int = self.get_prior_round_indices()[-1]
+        outcome: int = self._all_missions_and_sabotages_with_teams_and_suspect_count[last_prior][0]
+        if outcome == 0:
+            return GamestateTree.get_gstnode_from_index(last_prior).missionPassedChild
+        elif outcome > 0:
+            return GamestateTree.get_gstnode_from_index(last_prior).missionFailedChild
+        else:
+            return GamestateTree.get_gstnode_from_index(last_prior).voteFailedChild
 
     @property
     def all_missions_and_sabotages_with_teams_and_suspect_count(self) -> Dict[int, Tuple[int, int, int]]:
@@ -1852,15 +1762,15 @@ class GameRecord(object):
         """
         out_dict: Dict[str, str] = {}
         for kv in self._player_records.items():
-            out_dict[kv[0].__str__()] = kv[1].to_json_string()
+            out_dict[kv[0].__str__()] = kv[1].to_json_string
         return out_dict
 
-    def get_info_about_sabotages_from_spies_for_sabotage_records(self,
-         the_spies: List[TPlayer],
-         me: TPlayer,
-         im_spy: bool,
-         my_known_sabs: List[int]
-    ) -> Dict[
+    def get_info_about_sabotages_from_spies_for_sabotage_records(
+            self,
+            the_spies: List[TPlayer],
+            me: TPlayer,
+            im_spy: bool,
+            my_known_sabs: List[int]) -> Dict[
         str, List[Tuple[int, int, bool, bool, bool]]
     ]:
         """
@@ -1954,7 +1864,6 @@ class GameRecord(object):
         else:
             return list(indices[0:round_n+1])
 
-
     @property
     def get_player_records(self) -> Dict[TPlayer, PlayerRecord]:
         """
@@ -1963,6 +1872,16 @@ class GameRecord(object):
         """
         return self._player_records.copy()
 
+    @property
+    def get_suspicion_dict(self) -> Dict[TPlayer, float]:
+        """
+        Returns a copy of the suspicion dict,
+        which holds the predictions about how likely each player is to be a spy,
+        calculated from the neural network.
+        :return: a copy of the self._suspicion_dict mapping players to how likely they are to be a spy.
+        """
+        return self._suspicion_dict.copy()
+        #return self.heuristic_suspicion_dict
 
     @property
     def heuristic_suspicion_dict(self) -> Dict[TPlayer, float]:
@@ -1980,8 +1899,12 @@ class GameRecord(object):
     @property
     def belief_state_json_string(self) -> str:
         """
-        why the hell cant i unpickle something in a different file wtf
-        :return:
+        returns the info about the belief state stuff (for logging in the GameRecord log file,
+        used for training the neural network) in JSON string form
+        :return: JSON string with
+            The neural network inputs
+            The guesses made by the heuristic suspicion estimator
+            Who the spies are (one-hot encoded vector)
         """
         out_dict = {
             "nn_in": [],  # List[NN_T_INPUTS]
@@ -2009,89 +1932,6 @@ class GameRecord(object):
         :return:
         """
         GameRecord.log.info(self.belief_state_json_string)
-
-
-
-class GameRecordHistory(object):
-    """
-    A class that can be used to hold a history of gamerecord objects
-    """
-
-    def __init__(self):
-        self._records: List[GameRecord] = []
-        """
-        All the game records held in this history object
-        """
-
-    def add_records_from_game(self, new_record: GameRecord) -> NoReturn:
-        """
-        Adds the new gamerecord to the list of gamerecords
-        :param new_record: The new game record
-        :return: nothing
-        """
-        self._records.append(new_record)
-
-    @property
-    def get_records(self) -> List[GameRecord]:
-        """
-        Obtains all of the records held in this PlayerRecordHolder
-        :return: the list of all the records in this holder (arranged per game)
-        """
-        return self._records.copy()
-
-    @property
-    def get_training_set_and_test_set_and_validation_set(
-            self, training_size: float = 0.4, test_size: float = 0.4
-    ) -> Tuple[List[GameRecord], List[GameRecord], List[GameRecord]]:
-        """
-        Attempts to create a training set and a validation set from the data we have.
-        :param training_size: what proportion of our data are we putting into our training set?
-        :param test_size: what proportion of our data are we putting into our test set?
-        :return: a tuple with (training set data, test set data, validation set data)
-        """
-
-        rec_len: int = len(self._records)
-
-        training_len: int = int(rec_len * training_size)
-        test_len: int = int(rec_len * test_size)
-
-        tt_len: int = training_len + test_len
-
-        val_len: int = rec_len - training_len - test_len
-
-        assert training_len > 0
-        assert test_len > 0
-        assert val_len > 0
-        assert training_len + tt_len == rec_len
-
-        shuffled_all: List[GameRecord] = random.sample(self._records, rec_len)
-
-        return shuffled_all[0:training_len], shuffled_all[training_len:tt_len], shuffled_all[tt_len:rec_len]
-
-
-
-class PlayerRecordNNEstimator(object):
-
-
-    def __init__(self, model: keras.Model):
-        self._model: keras.Model = model
-
-    def estimate_individual_spy_chances_from_playerrecords(
-            self,
-            records: Tuple[PlayerRecord, PlayerRecord, PlayerRecord, PlayerRecord, PlayerRecord],
-            round_num: int = -1
-    ):
-        """
-        Uses the model to estimate the individual chances of each player being a spy
-        :param records: the playerrecords we have access to
-        :param round_num: current round number (-1 to get data for all rounds so far)
-        :return: (is spy chance, not spy chance) calculated by the model for each of the individual spy chances things
-        """
-
-        # noinspection PyTypeChecker
-        return self._model(pr.trim_property_list_to_before_round_n(round_num) for pr in records)
-
-
 
 
 class SpySabotageChanceStats(object):
@@ -2434,7 +2274,9 @@ class SpySabotageChanceStats(object):
         else:
             return general_probs  # otherwise we return what we got for the general case.
 
-    def to_json_string(self, these_players: Iterable[str] = (), full_data: bool = True, all_players: bool = False) -> str:
+    def to_json_string(
+            self, these_players: Iterable[str] = (), full_data: bool = True, all_players: bool = False
+    ) -> str:
         """
         Returns JSON string'd info about the spy sabotage probabilities of the given agents
         :param these_players: an iterable containing the string names of the players we want to get info for
@@ -2467,6 +2309,9 @@ class WinProbabilitiesTable(object):
     R_WINS: str = "r_wins"
 
     def __init__(self):
+        """
+        Initialises itself with all those dictionaries, all blank etc
+        """
 
         self._win_probs_tables: Dict[int, Dict[RoleAllocationEnum, Dict[str, int]]] = dict.fromkeys(
             GamestateTree.get_all_non_terminal_gamestates_indices(), dict.fromkeys(
@@ -2544,7 +2389,6 @@ class WinProbabilitiesTable(object):
                self.win_probs_from_gs_and_alloc(gs_node.voteFailedChild, spies),\
                self.win_probs_from_gs_and_alloc(gs_node.voteFailedChild, spies)
 
-
     def win_probs_from_gs(self, gs_id: int) -> float:
         """
         Obtain the overall win probabilities from the given gamestate,
@@ -2575,7 +2419,7 @@ class WinProbabilitiesTable(object):
             return 0, 0, 0
         gs_node: GamestateTree.GamestateTreeNode = GamestateTree.get_gstnode_from_index(gs_id)
 
-        return self.win_probs_from_gs(gs_node.missionPassedChild), \
+        return self.win_probs_from_gs(gs_node.missionPassedChild),\
                self.win_probs_from_gs(gs_node.voteFailedChild), \
                self.win_probs_from_gs(gs_node.voteFailedChild)
 
@@ -2592,17 +2436,6 @@ class WinProbabilitiesTable(object):
             if res_win:
                 self._win_probs_tables[s][spies][WinProbabilitiesTable.R_WINS] += 1
                 self._total_win_probs_table[s][WinProbabilitiesTable.R_WINS] += 1
-
-
-class NeuralNetworker(object):
-    """
-    A class that loads and holds all of the neural networks used by this bot,
-    as well as providing wrappers for using the neural networks.
-    """
-
-    def __init__(self):
-        # TODO: methods to load the neural networks
-        pass
 
 
 class rl18730(Bot):
@@ -2622,8 +2455,8 @@ class rl18730(Bot):
     so, if this object only belonged to an instance of this class, it would be reset every single game,
     making it incredibly useless. So it's here instead.
     """
-    if os.path.exists(resources_file_path / "sabotages.p"):
-        with open(resources_file_path / "sabotages.p", "rb") as p:
+    if os.path.exists(resources_file_path / "sabotages.pickle"):
+        with open(resources_file_path / "sabotages.pickle", "rb") as p:
             _sabotage_chance_stats: SpySabotageChanceStats = pickle.load(p)
             p.close()
 
@@ -2631,19 +2464,10 @@ class rl18730(Bot):
     """
     A table to keep track of the chance of winning with each role combo from each gamestate
     """
-    if os.path.exists(resources_file_path / "win_probs.p"):
-        with open(resources_file_path / "win_probs.p", "rb") as p:
+    if os.path.exists(resources_file_path / "win_probs.pickle"):
+        with open(resources_file_path / "win_probs.pickle", "rb") as p:
             _win_probabilities_table: SpySabotageChanceStats = pickle.load(p)
             p.close()
-
-    #_game_record_history: GameRecordHistory = GameRecordHistory()
-    #"""
-    #Keeps track of player records
-    #"""
-    #if os.path.exists(resources_file_path / "game_records.p"):
-    #    with open(resources_file_path / "game_records.p", "rb") as p:
-    #        _game_record_history: GameRecordHistory = pickle.load(p)
-    #        p.close()
 
     def __init__(self, game: State, index: int, spy: bool):
         """Constructor called before a game starts.  It's recommended you don't
@@ -2661,7 +2485,6 @@ class rl18730(Bot):
         and how to get code to use it.
         """
         super().__init__(game, index, spy)
-
 
         self.spies: Set[TPlayer] = set()
         """Set of known spies (empty unless spy)"""
@@ -2692,7 +2515,6 @@ class rl18730(Bot):
         """The temporary teamrecord, which will hold info for the current team, and will be updated on the fly,
         before eventually being added to the history of team records."""
 
-
         self.leader_order: List[TPlayer] = []
         """Keeps track of the order of leaders (0->1st leader, 4->final (has hammer))"""
 
@@ -2705,7 +2527,7 @@ class rl18730(Bot):
         Values: (p1 spy chance + p2 spy chance)/2 -> chance that those two players are the spies.
         """
         self.role_combos_that_im_in: Tuple[RoleAllocationEnum, ...] = tuple(
-            t for t in RoleAllocationEnum.__members__.values() if index in t.extract_sublist_from([0,1,2,3,4])
+            t for t in RoleAllocationEnum.__members__.values() if index in t.extract_sublist_from([0, 1, 2, 3, 4])
         )
         """
         The role combos that include this agent.
@@ -2734,20 +2556,16 @@ class rl18730(Bot):
         Role allocation enum for the known spies.
         """
 
-        # TODO: perhaps these might help the resistance win rate?
-        self.passed_teams: List[List[TPlayer]] = []
-        """
-        A list of teams that have managed to pass a mission without any sabotages happening
-        """
-        self.sabotaged_teams: List[List[TPlayer]] = []
-        """
-        A list of teams that have ended in a sabotage.
-        """
-
         self.player_suspect_counts: Dict[TPlayer, int] = {}
         """
         Suspect counts for each player
         (Sabotages on teams that this player was in)
+        """
+
+        self.needs_to_shut_up: Dict[TPlayer, bool] = {}
+        """
+        Whether or not we need to tell a certain player to shut up.
+        We only bother telling them to shut up once per turn, to avoid any risk of an infinite loop of replies.
         """
 
     def onGameRevealed(self, players: List[TPlayer], spies: Set[TPlayer]) -> NoReturn:
@@ -2765,6 +2583,7 @@ class rl18730(Bot):
 
         for p in players:
             self.player_suspect_counts[p] = 0
+            self.needs_to_shut_up[p] = True
 
         if self.spy:
             self.spies = spies
@@ -2808,12 +2627,15 @@ class rl18730(Bot):
 
         self.temp_team_record.reset_at_round_start(leader, mission, tries)
 
+        # we can tell everyone to shut up again.
+        for p in self.game.players:
+            self.needs_to_shut_up[p] = True
+
         # work out the order of leaders for this mission if this is the 1st attempt (start of a new mission)
         if tries == 1:
             self.leader_order.clear()
             for i in range(0, 4):
                 self.leader_order.append(self.game.players[(leader.index + i) % len(self.game.players)])
-
         pass
 
     def select(self, players: List[TPlayer], count: int) -> List[TPlayer]:
@@ -2858,7 +2680,7 @@ class rl18730(Bot):
                     random.sample(self.the_other_role_combos, 6), key=lambda k: self.suspicion_for_each_role_combo[k]
                 ).extract_sublist_from(players)
 
-            player_suspicions: Dict[TPlayer, float] = self.game_record.heuristic_suspicion_dict
+            player_suspicions: Dict[TPlayer, float] = self.game_record.get_suspicion_dict
             team_list.append(min(random.sample(self.others(), 4), key=lambda k: player_suspicions[k]))
             return team_list
 
@@ -2866,7 +2688,6 @@ class rl18730(Bot):
             random.sample(self.the_other_role_combos, 6), key=lambda k: self.suspicion_for_each_role_combo[k]
         ).extract_sublist_from(players)
 
-        #the_others: List[TPlayer] = self.others()
         return [self] + least_suspicious
 
     def onTeamSelected(self, leader: TPlayer, team: List[TPlayer]) -> NoReturn:
@@ -2875,7 +2696,7 @@ class rl18730(Bot):
         :param leader:   The leader in charge for this mission.
         :param team:     The team that was selected by the current leader.
         """
-        self.temp_team_record.add_team_info(team, self.game_record.heuristic_suspicion_dict)
+        self.temp_team_record.add_team_info(team, self.game_record.get_suspicion_dict)
         pass
 
     def vote(self, team: List[TPlayer]) -> bool:
@@ -2907,16 +2728,10 @@ class rl18730(Bot):
 
         if self.spy:
 
-            # How likely are the resistance to win if the vote passes/fails/is rejected, considering allocation?
-            res_win_if_pass_a, res_win_if_fail_a, res_win_if_rej_a =\
-                rl18730._win_probabilities_table.win_probs_of_children_from_gs_and_alloc(
-                    self.current_gamestate, self.spy_RAE
-                )
-
             spies_on_team: int = len([s for s in self.spies if s in team])
 
             current_sus: List[Tuple[TPlayer, float]] = sorted(
-                random.sample(self.game_record.heuristic_suspicion_dict.items(), 5),
+                random.sample(self.game_record.get_suspicion_dict.items(), 5),
                 key=lambda kv: kv[1]
             )
 
@@ -3009,11 +2824,6 @@ class rl18730(Bot):
                     # as approving this team would lead to a loss.
                     return False
 
-                # TODO: use a neural network to work out how likely it would be for a team to win the game
-                #  if this team gets approved (non-sabotage from this gamestate) or rejected (from this gamestate).
-                #  If a resistance win is more likely if approved, vote no. If a resistance win is more likely if
-                #  rejected, vote yes.
-
                 # Vote yes if the resistance are less likely to win if it passes than if it's rejected,
                 # or if voting in favour of it makes us seem less suspicious relative to the others than if we
                 # were to vote no to it, as long as either we (or the other spy) will still be within the 3 least
@@ -3054,12 +2864,11 @@ class rl18730(Bot):
                         # as long as we currently don't look _too_ suspicious.
                         return True
                     # otherwise, this spy would act like it normally would if it was a resistance member.
-                    return normal_resistance_vote or\
-                           (voted_yes_sus_level < 3 or other_spy_sus_level_if_yes < 3)
+                    return normal_resistance_vote or (
+                            voted_yes_sus_level < 3 or other_spy_sus_level_if_yes < 3
+                    )
 
             else:
-                # TODO: is it a good idea for me to vote for this team if there are two spies on it?
-
                 # First things first: we act natural. If we have a decent reason to vote against it, vote against it.
                 # there's a ~50% chance that we will have an excuse to vote against it.
                 if not normal_resistance_vote:
@@ -3075,17 +2884,10 @@ class rl18730(Bot):
                         return voted_yes_sus_level < 3 or other_spy_sus_level_if_yes < 3
                     else:
                         return False
-
                 pass
 
-            # TODO as spy, work out:
-            #      is it safe to let the resistance win this round if there aren't any spies on the team?
-            #      if this bot is on the team, is it safe to sabotage it without looking sus?
-            #           and if there is another spy, should this agent sabotage, or let the other spy do it?
-            # return True
             pass
 
-        # TODO as resistance, work out how likely the team is to have a spy who will sabotage it on it.
         return normal_resistance_vote
 
     def _vote_like_a_normal_resistance_member(self, team: List[TPlayer]) -> bool:
@@ -3108,9 +2910,6 @@ class rl18730(Bot):
         most_sus_players: List[TPlayer] = max(
             random.sample(self.the_other_role_combos, 6), key=lambda k: self.suspicion_for_each_role_combo[k]
         ).extract_sublist_from(self.game.players)
-
-        res_win_if_pass, res_win_if_fail, res_win_if_rej = \
-            rl18730._win_probabilities_table.get_win_probs_of_gs_children(self.current_gamestate)
 
         if most_sus_players[0] in team or most_sus_players[1] in team:
             return False
@@ -3177,9 +2976,6 @@ class rl18730(Bot):
                 # if the other spy is at least 50% likely to sabotage, we let them sabotage.
                 return False
 
-
-        # TODO: is it better to sabotage or to let this one through unsabotaged? might need to refer to the results
-        #  from the NN earlier on.
         return True
 
     def onMissionComplete(self, sabotaged: int) -> NoReturn:
@@ -3220,12 +3016,12 @@ class rl18730(Bot):
             sum(kv[1] for kv in self.player_suspect_counts.items() if kv[0] in self.game.team)
         )
 
-        heuristic_suspicions: Dict[TPlayer, float] = self.game_record.heuristic_suspicion_dict
+        player_suspicions: Dict[TPlayer, float] = self.game_record.get_suspicion_dict
 
-        self.temp_team_record.add_current_spy_probs_and_suspect_counts(heuristic_suspicions, self.player_suspect_counts)
+        self.temp_team_record.add_current_spy_probs_and_suspect_counts(player_suspicions, self.player_suspect_counts)
 
         if not self.spy:
-            heuristic_suspicions[self] = 0  # Why would I suspect myself of being a spy???
+            player_suspicions[self] = 0  # Why would I suspect myself of being a spy???
             # we only zero this if we're in the resistance, because spies need to worry more about not appearing too sus
 
         the_players: List[TPlayer] = self.game.players
@@ -3235,9 +3031,9 @@ class rl18730(Bot):
             rp_list: Tuple[bool, bool, bool, bool, bool] = rp.get_value()
             for r in range(len(rp_list)):
                 if rp_list[r]:
-                    sus_level *= heuristic_suspicions[the_players[r]]
+                    sus_level *= player_suspicions[the_players[r]]
                 else:
-                    sus_level *= (1 - heuristic_suspicions[the_players[r]])
+                    sus_level *= (1 - player_suspicions[the_players[r]])
             self.suspicion_for_each_role_combo[rp] = sus_level
 
         most_sus: RoleAllocationEnum = max(
@@ -3248,36 +3044,17 @@ class rl18730(Bot):
         most_sus_players: List[TPlayer] = most_sus.extract_sublist_from(self.game.players)
 
         self.say(
-            "I believe that {} and {} are most likely to be spies, as those two are {}% likely to be the spies".format(
-                most_sus_players[0], most_sus_players[1], self.suspicion_for_each_role_combo[most_sus]
+        "I believe that {0} and {1} are most likely to be spies.\n{0} is {2}% likely to be a spy.\n{1} is {3}% likely."
+            .format(
+                most_sus_players[0], most_sus_players[1],
+                player_suspicions[most_sus_players[0]] * 100, player_suspicions[most_sus_players[1]] * 100
             )
         )
-
-        # no need to bother normalizing the heuristic suspicions for our internal use
-
-        #self.suspicion_for_each_role_combo[rp] = \
-        #    sum(heuristic_suspicions[p] for p in those_players)/2
-        # (heuristic_suspicions[those_players[0]] + heuristic_suspicions[the_players[rp[1]]]) / 2
-
-        #print("CHANCES OF EACH TEAM BEING SPIES: ")
-        #for rp in [*self.suspicion_for_each_role_combo.keys()]:
-        #    print("{}: {}".format(rp, self.suspicion_for_each_role_combo[rp]))
-
-        #this_round_record: TeamRecord = self.temp_team_record.generate_teamrecord_from_data
-
-        # TODO: team record in the form
-        #       * leader sus level
-        #       * team sus levels
-        #       * player sus levels
-        #       * outcome (sabotages)
-        #      so I can put that into some per-gamestate neural networks(?)
 
         self.game_record.add_teamrecord_to_records(
             self.current_gamestate,
             self.temp_team_record.generate_teamrecord_from_data
         )
-
-
 
         pass
 
@@ -3290,9 +3067,9 @@ class rl18730(Bot):
 
         :return: Dict[Player, float]     Mapping of player to spy probability.
         """
-        hsd: Dict[Player, float] = self.game_record.heuristic_suspicion_dict
-        hsd.pop(self)  # so I don't accidentally incriminate myself.
-        return hsd
+        amogus: Dict[Player, float] = self.game_record.get_suspicion_dict
+        amogus.pop(self)  # so I don't accidentally incriminate myself.
+        return amogus
 
     def onAnnouncement(self, source: Player, announcement: Dict[Player, float]) -> NoReturn:
         """Callback if another player decides to announce beliefs about the
@@ -3327,13 +3104,15 @@ class rl18730(Bot):
         it tells that sussy baka to better shut up.
 
         Because it does not like hearing anything from a sussy baka.
+        (only tells them to shut up once per turn, to avoid an infinite dialogue loop)
 
         :param source:       Player sending the message.
         :param message:  Arbitrary string for the message sent.
         """
-        if source in max(
+        if self.needs_to_shut_up[source] and source in max(
             random.sample(self.the_other_role_combos, 6), key=lambda k: self.suspicion_for_each_role_combo[k]
         ).extract_sublist_from(self.game.players):
+            self.needs_to_shut_up[source] = False
             self.say(
                 random.sample(
                     [
@@ -3400,10 +3179,10 @@ class rl18730(Bot):
         )
         """
 
-        with open(resources_file_path/"sabotages.p", "wb") as p:
+        with open(resources_file_path/"sabotages.pickle", "wb") as p:
             pickle.dump(rl18730._sabotage_chance_stats, p)
             p.close()
-        with open(resources_file_path/"win_probs.p", "wb") as p:
+        with open(resources_file_path/"win_probs.pickle", "wb") as p:
             pickle.dump(rl18730._win_probabilities_table, p)
             p.close()
 
