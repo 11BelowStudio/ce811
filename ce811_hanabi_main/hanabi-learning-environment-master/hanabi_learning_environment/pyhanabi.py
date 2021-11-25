@@ -22,7 +22,7 @@ import sys
 DEFAULT_CDEF_PREFIXES = (None, ".", os.path.dirname(__file__), "/include")
 DEFAULT_LIB_PREFIXES = (None, ".", os.path.dirname(__file__), "/lib")
 PYHANABI_HEADER = "pyhanabi.h"
-PYHANABI_LIB = ["libpyhanabi.so", "libpyhanabi.dylib"]
+PYHANABI_LIB = ["libpyhanabi.so", "libpyhanabi.dylib","libpyhanabi.dll","libpyhanabi.dll.a"]
 COLOR_CHAR = ["R", "Y", "G", "W", "B"]  # consistent with hanabi_lib/util.cc
 CHANCE_PLAYER_ID = -1
 
