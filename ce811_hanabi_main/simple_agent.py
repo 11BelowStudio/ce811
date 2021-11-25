@@ -22,7 +22,6 @@ class SimpleAgent(Agent):
         """Act based on an observation."""
 
 
-
         if observation['current_player_offset'] != 0:
             return None # No action returned (because it's not our turn!)
 
