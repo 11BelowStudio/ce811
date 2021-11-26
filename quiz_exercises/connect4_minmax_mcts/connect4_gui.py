@@ -35,11 +35,13 @@ class Agents(Enum):
 #controllers=[Agents.MINIMAX,Agents.USER]
 #controllers=[Agents.USER,Agents.MINIMAX]
 #controllers=[Agents.MINIMAX,Agents.USER]
-#controllers=[Agents.MCTS,Agents.MINIMAX]
-#controllers=[Agents.USER,Agents.MINIMAX]
+controllers=[Agents.MCTS,Agents.MINIMAX]
+#controllers=[Agents.USER,Agents.MCTS]
 #controllers=[Agents.MINIMAX,Agents.USER]
 #controllers=[Agents.MINIMAX,Agents.MCTS]
-controllers=[Agents.MINIMAX, Agents.STATIC_EVALUATOR]
+#controllers=[Agents.MINIMAX, Agents.STATIC_EVALUATOR]
+#controllers=[Agents.MCTS, Agents.USER]
+
 
 
 def create_empty_board():

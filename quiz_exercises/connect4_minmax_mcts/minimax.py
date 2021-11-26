@@ -6,6 +6,14 @@
 # All of the graphics and some other code for the main game loop and minimax came from https://github.com/KeithGalli/Connect4-Python
 # Some of the connect4Board logic and MCTS algorithm came from https://github.com/floriangardin/connect4-mcts 
 # Other designs are implemented from the Millington and Funge Game AI textbook chapter on Minimax.
+
+# The static evaluator was implemented by Rachel Lowe,
+# and the specific 'minimizer' and 'maximizer' move choices in the minimax stuff (along with the AB pruning)
+# was implemented by Rachel Lowe.
+
+# the specific alpha-beta pruning implementation was based on the psuedocode availiable at
+# https://www.geeksforgeeks.org/minimax-algorithm-in-game-theory-set-4-alpha-beta-pruning/
+
 import random
 from connect4Board import Board
 import math
@@ -59,14 +67,12 @@ def static_evaluator(board, piece) -> int:
     return score
 
 
-
 ab_pruning: bool = True
+
 
 def minimax(board, current_depth, max_depth, player, alpha: int=-100000000, beta: int=100000000) -> Tuple[Union[int, None], int]:
     # This function needs to return (best_move,value), where value is the value of the board according to player=player
     # See Millington and Funge, "Game Artificial Intelligence" texbook, 2nd edition, chapter 8.2 for pseudocode
-
-    print("Alpha: {}, Beta: {}".format(alpha, beta))
 
     if player==board.get_player_turn():
         maximiser = True # This means we are at the "maximiser" level of the game tree
@@ -91,10 +97,11 @@ def minimax(board, current_depth, max_depth, player, alpha: int=-100000000, beta
     # Use recursion to move down through the minimax levels and calculate the best_move and board value....            
     valid_moves = board.valid_moves()
     if maximiser:
+        # this if/else statement was by Rachel Lowe
         if ab_pruning:
             best_val: int = -100000001
             best_move = valid_moves[0]
-            for m in valid_moves:
+            for m in random.sample(valid_moves,len(valid_moves)):
                 val = minimax(
                     board.play(m), current_depth + 1, max_depth, player, alpha, beta
                 )[1]
@@ -116,10 +123,11 @@ def minimax(board, current_depth, max_depth, player, alpha: int=-100000000, beta
             return best_move, mm[1]
 
     else:  # Minimising player
+        # this if/else statement was also by Rachel Lowe
         if ab_pruning:
             best_val: int = +100000001
             best_move = valid_moves[0]
-            for m in valid_moves:
+            for m in random.sample(valid_moves,len(valid_moves)):
                 val = minimax(
                     board.play(m), current_depth + 1, max_depth, player, alpha, beta
                 )[1]
