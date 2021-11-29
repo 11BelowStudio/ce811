@@ -30,7 +30,7 @@ from __future__ import print_function
 import time
 
 from third_party.dopamine import checkpointer
-from third_party.dopamine import iteration_statistics
+from third_party.dopamine import iter_stats
 import dqn_agent
 import gin.tf
 from hanabi_learning_environment import rl_env
@@ -396,7 +396,7 @@ def run_one_iteration(agent, environment, obs_stacker,
   """
   start_time = time.time()
 
-  statistics = iteration_statistics.IterationStatistics()
+  statistics = iter_stats.IterationStatistics()
 
   # First perform the training phase, during which the agent learns.
   agent.eval_mode = False
