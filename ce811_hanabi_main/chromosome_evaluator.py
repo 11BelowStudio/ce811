@@ -5,7 +5,7 @@
 import random
 import sys
 from hanabi_learning_environment import rl_env
-from rule_agent_chromosome import RuleAgentChromosome, SimpleRuleChromosome
+from rule_agent_chromosome import RuleAgentChromosome, SimpleRuleChromosome, RulesChromosome
 import os, contextlib
 
 from typing import List
@@ -54,8 +54,8 @@ def run(num_episodes, num_players, chromosome, verbose=False):
     return sum(game_scores)/len(game_scores)
 
 
-def run_fitness_fun(individual: SimpleRuleChromosome) -> float:
-    return run(num_episodes, num_players, individual.chromosome)
+def run_fitness_fun(individual: RulesChromosome) -> float:
+    return run(num_episodes, num_players, individual.to_rule_priority_list)
 
 
 def GA_runner(
@@ -66,11 +66,11 @@ def GA_runner(
         print_fittest_per_generation: bool = True,
         print_all_per_generation: bool = False,
         verbose: bool = True
-) -> SimpleRuleChromosome:
+) -> RulesChromosome:
 
-    population: List[SimpleRuleChromosome] = []
+    population: List[RulesChromosome] = []
     for _ in range(pop_size):
-        population.append(SimpleRuleChromosome.generate_randomly())
+        population.append(RulesChromosome())
         if verbose:
             print("Initialized {} of {}".format(_+1, pop_size))
     population.sort(reverse=True)
@@ -83,14 +83,14 @@ def GA_runner(
             print(p)
 
     for g in range(generations):
-        new_generation: List[SimpleRuleChromosome] = []
+        new_generation: List[RulesChromosome] = []
         while len(new_generation) < pop_size:
             if random.random() < mut_rate:
-                new_generation.append(SimpleRuleChromosome.mutate(max(random.sample(population, tournament_size))))
+                new_generation.append(RulesChromosome.mutate(max(random.sample(population, tournament_size))))
             else:
-                tourn: List[SimpleRuleChromosome] = random.sample(population, tournament_size+1)
+                tourn: List[RulesChromosome] = random.sample(population, tournament_size+1)
                 tourn.sort(reverse=True)
-                new_generation.append(SimpleRuleChromosome.crossover(
+                new_generation.append(RulesChromosome.crossover(
                     tourn[0], tourn[1]
                 ))
 
@@ -114,12 +114,12 @@ if __name__=="__main__":
     # TODO you could potentially code a genetic algorithm in here...
     num_players=4
 
-    SimpleRuleChromosome.define_fitness_function(run_fitness_fun)
+    RulesChromosome.define_fitness_function(run_fitness_fun)
 
     chromosome: List[int] = [0,2,5,6]
 
     # best: SimpleRuleChromosome = SimpleRuleChromosome()
-    best: SimpleRuleChromosome = GA_runner(30, 8, 0.25, 3, True, False)
+    best: RulesChromosome = GA_runner(30, 15, 0.25, 4, True, False)
 
     #with open(os.devnull, 'w') as devnull:
     #    with contextlib.redirect_stdout(devnull):
