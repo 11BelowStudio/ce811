@@ -1,10 +1,14 @@
 # A rule-based hanabi agent driven by a chromosome.
 # The objective of this class is to be a starter-class for a larger set of rules.
 # M. Fairbank. November 2021.
+import random
+
 from hanabi_learning_environment.rl_env import Agent
 
+import enum
 
-from typing import TypedDict, Literal, Union, List, TypeVar
+
+from typing import TypedDict, Literal, Union, List, TypeVar, Tuple, Callable, Iterable, Any
 
 Color = Literal["B", "G", "R", "W", "Y"]
 CardColor = Literal[None, Color]
@@ -73,19 +77,89 @@ class ObservationDict(TypedDict):
     vectorized: List[Literal[0, 1]]
 
 
-def argmax(llist):
+
+chromo_tuple = Tuple[bool, bool, bool, bool, bool, bool, bool]
+
+
+class SimpleRuleChromosome(object):
+
+    def __init__(self, config: chromo_tuple = (1, 0, 1, 0, 0, 1, 1)):
+        self._chromosome: chromo_tuple = config
+        self._fitness: float = SimpleRuleChromosome.fitness_function(self)
+
+    def __lt__(self, other: "SimpleRuleChromosome") -> bool:
+        return self.fitness < other._fitness
+
+    @property
+    def chromosome(self) -> chromo_tuple:
+        return self._chromosome
+
+    @property
+    def fitness(self) -> float:
+        return self._fitness
+
+    @staticmethod
+    def crossover(parent1: "SimpleRuleChromosome", parent2: "SimpleRuleChromosome") -> "SimpleRuleChromosome":
+        new_child_list: List[bool] = []
+        for i in range(len(parent1.chromosome)):
+            if random.random() > 0.5:
+                new_child_list.append(parent1.chromosome[i])
+            else:
+                new_child_list.append(parent2.chromosome[i])
+        # noinspection PyTypeChecker
+        return SimpleRuleChromosome(tuple(new_child_list))
+
+    @staticmethod
+    def mutate(parent: "SimpleRuleChromosome") -> "SimpleRuleChromosome":
+        new_child_list: List[bool] = []
+        p_len: int = len(parent.chromosome)
+        for i in parent.chromosome:
+            if random.randrange(0, p_len) == 0:
+                new_child_list.append(not i)
+            else:
+                new_child_list.append(i)
+        # noinspection PyTypeChecker
+        return SimpleRuleChromosome(tuple(new_child_list))
+
+    @staticmethod
+    def fitness_function(individual: "SimpleRuleChromosome") -> float:
+        return -1
+
+    @classmethod
+    def define_fitness_function(cls, fit_fun: Callable[["SimpleRuleChromosome"], float]):
+        SimpleRuleChromosome.fitness_function = fit_fun
+
+
+    @staticmethod
+    def generate_randomly(length: int = 7) -> "SimpleRuleChromosome":
+        # noinspection PyTypeChecker
+        return SimpleRuleChromosome(tuple(
+            random.random() > 0.5 for i in range(0, length)
+        ))
+
+    def __str__(self) -> str:
+        return "{} fitness {}".format(self.chromosome, self.fitness)
+
+
+
+
+def argmax(llist: List[Any]) -> int:
     #useful function for arg-max
     return llist.index(max(llist))
+
+def argmin(llist: List[Any]) -> int:
+    # argmin
+    return llist.index(min(llist))
     
 class RuleAgentChromosome(Agent):
     """Agent that applies a simple heuristic."""
 
-    def __init__(self, config, chromosome: List[int] = [0,1,5,6], *args, **kwargs):
+    def __init__(self, config, chromosome: chromo_tuple, *args, **kwargs):
         # TODO replace this default chromosome with something better, if possible.  Plus, Add new bespoke rules below if necessary.
         """Initialize the agent."""
         self.config = config
-        self.chromosome: List[int] = chromosome
-        assert isinstance(chromosome, list)
+        self.chromosome: chromo_tuple = chromosome
+        assert isinstance(chromosome, tuple)
         
         # Extract max info tokens or set default to 8.
         self.max_information_tokens = config.get('information_tokens', 8)
@@ -165,55 +239,60 @@ class RuleAgentChromosome(Agent):
         
         # based on the above calculations, try a sequence of rules in turn and perform the first one that is applicable:
         
-        for rule in self.chromosome:
-            if rule in [0, 1]:
-                # Play any highly-probable playable cards:
-                threshold=0.8 if rule==0 else 0.5
-                if max(probability_cards_playable)>threshold:
-                    card_index=argmax(probability_cards_playable)
-                    return {'action_type': 'PLAY', 'card_index': card_index}
+        #for rule in self.chromosome:
+        if self.chromosome[0] or self.chromosome[1]:
+            # Play any highly-probable playable cards:
+            threshold=0.8 if self.chromosome[0] else 0.5
+            if max(probability_cards_playable) > threshold:
+                card_index=argmax(probability_cards_playable)
+                return {'action_type': 'PLAY', 'card_index': card_index}
 
-            elif rule==2:
-                # Check if it's possible to hint a card to your colleagues.  TODO this could be split into 2 separate rules?
-                if observation['information_tokens'] > 0:
-                    # Check if there are any playable cards in the hands of the opponents.
-                    for player_offset in range(1, observation['num_players']):
-                        player_hand = observation['observed_hands'][player_offset]
-                        player_hints = observation['card_knowledge'][player_offset]
-                        # Check if the card in the hand of the opponent is playable.
-                        for card, hint in zip(player_hand, player_hints):
-                            #if card['rank'] == fireworks[card['color']]:
-                            if self.is_card_playable(card,fireworks):
-                                if hint['color'] is None:
-                                    return {
-                                        'action_type': 'REVEAL_COLOR',
-                                        'color': card['color'],
-                                        'target_offset': player_offset
-                                    }
-                                elif hint['rank'] is None:
-                                    return {
-                                        'action_type': 'REVEAL_RANK',
-                                        'rank': card['rank'],
-                                        'target_offset': player_offset
-                                    }
-            elif rule in [3,4]:
-                # discard any highly-probable useless cards:
-                threshold=0.8 if rule==2 else 0.5
-                if observation['information_tokens'] < self.max_information_tokens:
-                    if max(probability_cards_useless)>threshold:
-                        card_index=argmax(probability_cards_useless)
-                        return {'action_type': 'DISCARD', 'card_index': card_index}
+        if self.chromosome[2]:
+            # Check if it's possible to hint a card to your colleagues.  TODO this could be split into 2 separate rules?
+            if observation['information_tokens'] > 0:
+                # Check if there are any playable cards in the hands of the opponents.
+                for player_offset in range(1, observation['num_players']):
+                    player_hand = observation['observed_hands'][player_offset]
+                    player_hints = observation['card_knowledge'][player_offset]
+                    # Check if the card in the hand of the opponent is playable.
+                    for card, hint in zip(player_hand, player_hints):
+                        #if card['rank'] == fireworks[card['color']]:
+                        if self.is_card_playable(card, fireworks):
+                            if hint['color'] is None:
+                                return {
+                                    'action_type': 'REVEAL_COLOR',
+                                    'color': card['color'],
+                                    'target_offset': player_offset
+                                }
+                            elif hint['rank'] is None:
+                                return {
+                                    'action_type': 'REVEAL_RANK',
+                                    'rank': card['rank'],
+                                    'target_offset': player_offset
+                                }
+        if self.chromosome[3] or self.chromosome[4]:
+            # discard any highly-probable useless cards:
+            threshold=0.8 if self.chromosome[3] else 0.5
+            if observation['information_tokens'] < self.max_information_tokens:
+                if max(probability_cards_useless)>threshold:
+                    card_index=argmax(probability_cards_useless)
+                    return {'action_type': 'DISCARD', 'card_index': card_index}
 
-            elif rule==5:
-                # Discard something
-                if observation['information_tokens'] < self.max_information_tokens:
-                    return {'action_type': 'DISCARD', 'card_index': 0}# discards the oldest card (card_index 0 will be oldest card)
-            elif rule==6:
-                # Play our best-hope card
-                return {'action_type': 'PLAY', 'card_index': argmax(probability_cards_playable)}
-            else:
-                # the chromosome contains an unknown rule
-                raise Exception("Rule not defined: "+str(rule))
+        if self.chromosome[5]:
+            # Discard something
+            if observation['information_tokens'] < self.max_information_tokens:
+                return {'action_type': 'DISCARD', 'card_index': argmax(probability_cards_useless)}# discards the oldest card (card_index 0 will be oldest card)
+        if self.chromosome[6]:
+            # Play our best-hope card
+            return {'action_type': 'PLAY', 'card_index': argmax(probability_cards_playable)}
+
+        if observation['information_tokens'] < self.max_information_tokens:
+            return {'action_type': 'DISCARD', 'card_index': argmax(probability_cards_useless)}
+        else:
+            return {'action_type': 'PLAY', 'card_index': argmax(probability_cards_playable)}
+            # the chromosome contains an unknown rule
+            #raise Exception("Rule not defined: "+str(rule))
         # The chromosome needs to be defined so the program never gets to here.  
         # E.g. always include rules 5 and 6 in the chromosome somewhere to ensure this never happens..        
-        raise Exception("No rule fired for game situation - faulty rule set")
+        #raise Exception("No rule fired for game situation - faulty rule set")
+
