@@ -140,7 +140,7 @@ class SimpleRuleChromosome(object):
     def __str__(self) -> str:
         return "{} fitness {}".format(self.chromosome, self.fitness)
 
-
+# Best result from above method was actually (False, True, True, True, False, False, False) fitness 16.36
 
 
 def argmax(llist: List[Any]) -> int:
