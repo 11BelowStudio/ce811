@@ -11,7 +11,7 @@ import os, contextlib
 from typing import List
 
 num_players: int = 4
-num_episodes: int = 25
+num_episodes: int = 50
 
 environment = rl_env.make(
         environment_name='Hanabi-Full',
@@ -119,7 +119,7 @@ if __name__=="__main__":
     chromosome: List[int] = [0,2,5,6]
 
     # best: SimpleRuleChromosome = SimpleRuleChromosome()
-    best: RulesChromosome = GA_runner(30, 15, 0.25, 4, True, False)
+    best: RulesChromosome = max(GA_runner(30, 20, 0.25, 4, True, False) for i in range(4))
 
     #with open(os.devnull, 'w') as devnull:
     #    with contextlib.redirect_stdout(devnull):
