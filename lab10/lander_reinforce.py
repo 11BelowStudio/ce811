@@ -3,12 +3,16 @@
 # Then modified to work with TensorlowV2.x by M. Fairbank, with many further enhancements.
 
 import gym
+import matplotlib.pyplot
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 from datetime import datetime
 import tensorflow as tf
 import numpy as np
 from tensorflow import keras
 from tensorflow.keras import layers
+from typing import List, Tuple
+import math
 
 def calculate_reinforce_gradient1(trajectory, total_reward, baseline, action_choices):
     # This function is meant to calculate (dL/d Theta), where L=(\sum_t (log(P_t))(R-b).
@@ -54,10 +58,18 @@ def calculate_reinforce_gradient(episode_observations, rewards_minus_baseline, e
     return grads
 
 
-def calculate_accumulated_discounted_rewards(episode_rewards, discount_factor):
-    discounted_episode_rewards= np.ones_like(episode_rewards)*sum(episode_rewards)
-    # TODO fix this to do the proper calculation for R_t
-    return discounted_episode_rewards # We need to return a numpy array of the same length and shape as the input array episode_rewards.
+def calculate_accumulated_discounted_rewards(episode_rewards, discount_factor) -> np.ndarray:
+    #discounted_episode_rewards= np.ones_like(episode_rewards)*sum(episode_rewards)
+
+    discounts = list(discount_factor ** i for i in range(len(episode_rewards)))
+
+    return np.array(
+        list(
+            sum(episode_rewards[i + j] * (discounts[j]) for j in range(0, len(episode_rewards) - i))
+            for i in range(len(episode_rewards))
+        )
+    )
+    # We need to return a numpy array of the same length and shape as the input array episode_rewards.
     
 
 def run_stochastic_policy(policy_network, observation):
@@ -107,20 +119,26 @@ policy_network = keras.Model(inputs=inputs, outputs=outputs, name="policy_networ
 # Using the shortcut connections above means I don't need to worry 
 # too much about how many hidden layers to add.  For example, if hidden 
 # layers 1 and 2 are not needed then they can simply be skipped over.
-policy_network.compile(optimizer='adam', loss=None) # force the network to compile with dummy loss function.  This is so that save_model will work without warnings.
+policy_network.compile(optimizer='adam', loss=None)
+# force the network to compile with dummy loss function.  This is so that save_model will work without warnings.
+
+print(policy_network.summary())
 
 reward_history=[]
 mean_discounted_reward_history=[]
 plt.ion()
-fig=plt.figure("Reward vs Iteration")
-ax=fig.add_subplot(111)
-ax.axis([0,NUM_EPISODES+1,-400,400])
-plt.ylabel('Reward')
-plt.xlabel('Iteration')        
-ax.plot(reward_history, 'b-')
-ax.set_title("Learning Rate:"+str(learning_rate)+" Discount Factor:"+str(discount_factor))
-plt.draw()
+fa: Tuple[plt.Figure, plt.Axes] = plt.subplots(nrows=1, ncols=1, figsize=(16,9))
+fig: plt.Figure = fa[0]
+#fig.suptitle("Reward vs Iteration")
+ax: plt.Axes = fa[1]
+fig.show()
 plt.pause(0.001)
+#plt.draw()
+#plt.pause(0.001)
+
+
+
+
 
 for episode in range(NUM_EPISODES):
     observation = env.reset()
@@ -130,7 +148,7 @@ for episode in range(NUM_EPISODES):
     episode_observations=[]
     episode_actions=[]
     episode_rewards=[]
-    while not(done):
+    while not done:
         if episode%50==0: env.render()
 
         # 1. Choose an action based on observation
@@ -160,6 +178,7 @@ for episode in range(NUM_EPISODES):
     episode_rewards_sum = sum(episode_rewards)
     rewards.append(episode_rewards_sum)
     max_reward_so_far = np.amax(rewards)
+    lowest_reward_so_far = np.amin(rewards)
 
     print("==========================================")
     print("Episode: ", episode)
@@ -187,16 +206,33 @@ for episode in range(NUM_EPISODES):
     discounted_episode_rewards -= baseline
     discounted_episode_rewards *= reward_scaler
     grads=calculate_reinforce_gradient(episode_observations, discounted_episode_rewards, episode_actions, policy_network)
-    grads=[-g for g in grads] # Put a minus sign before all of the gradients - because in RL we are trying to MAXIMISE a rewards, but optimizer.apply_graidents only works with MINIMISATION.
+    grads=[-g for g in grads]  # Put a minus sign before all of the gradients - because in RL we are trying to MAXIMISE a rewards, but optimizer.apply_graidents only works with MINIMISATION.
     optimizer.apply_gradients(zip(grads, policy_network.trainable_weights)) # This updates the parameter vector
 
-    if episode%10==0:
-        # every 10 NUM_EPISODES, re-plot the graph.
+    if (episode + 1)%50==0:
+        # every 50 NUM_EPISODES, re-plot the graph
+        print(reward_history)
+        ax.clear()
         ax.plot(reward_history, 'b-')
-        plt.draw()
-        plt.pause(0.001)
-
-plt.savefig("Result_"+datetime.now().strftime("%Y%m%d_%H%M%S")+".png")
+        ax.axis([0, NUM_EPISODES + 1, min(-400, math.floor(lowest_reward_so_far/100)*100), max(400, math.ceil(max_reward_so_far/100)*100)])
+        ax.set_ylabel('Reward')
+        ax.set_xlabel('Iteration')
+        ax.grid(visible=True, which="major", axis="y", linestyle="-")
+        ax.grid(visible=True, which="minor", axis="y", linestyle=":")
+        #ax.plot(reward_history, 'b-')
+        ax.set_title("Learning Rate:" + str(learning_rate) + " Discount Factor:" + str(discount_factor))
+        #ax.redraw_in_frame()
+        fig.show()
+        if episode != NUM_EPISODES-1:
+            plt.pause(0.001)
+    #
+    #    ax.clear()
+    #    ax.plot(reward_history, 'b-')
+    #    plt.show()
+    #    plt.pause(0.001)
+plt.show()
+fig.add_axes(ax)
+fig.savefig("Result_"+datetime.now().strftime("%Y%m%d_%H%M%S")+".png")
 final_average_fitness=np.array(reward_history[-40:]).mean()
 print("Finished Training.  Final average fitness",final_average_fitness)
 # Save the current model into a local folder
