@@ -70,6 +70,7 @@ class ObservationDict(TypedDict):
     num_players: int
     vectorized: List[Literal[0, 1]]
 
+protag = True
 
 class SimpleAgent(Agent):
     """Agent that applies a simple heuristic."""
@@ -79,6 +80,10 @@ class SimpleAgent(Agent):
         self.config = config
         # Extract max info tokens or set default to 8.
         self.max_information_tokens: int = config.get('information_tokens', 8)
+        print(config)
+        print(args)
+        print(kwargs)
+        self._protag = False
 
 
     def playable_card(self, card: KnownCard, fireworks: FireworksDict) -> bool:
@@ -105,6 +110,12 @@ class SimpleAgent(Agent):
         in our hand, we the only things we know about them is that the 3rd card is blue,
         and the 5th card is white.  We don't know any of the card ranks yet.
         '''
+        if self._protag:
+            pass
+            #print("p1 card observation + knowledge")
+            #print(observation["observed_hands"][3])
+            #print(observation["card_knowledge"][3])
+
 
         #print(card_knowledge_about_own_hand)
 
