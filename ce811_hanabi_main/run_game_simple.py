@@ -65,15 +65,13 @@ def _pretty_write_dict(dictionary):
     dict_text = _nested(dictionary)
     return dict_text
 
+max_game_length: int = 0
 
-
-for i in range(5):
+for i in range(200):
 
     observations = environment.reset()
 
-
-
-
+    turns: int = 0
 
     first = True
 
@@ -85,11 +83,12 @@ for i in range(5):
     done = False
     episode_reward = 0
     while not done:
+        turns += 1
         for agent_id, agent in enumerate(agents):
             observation = observations['player_observations'][agent_id]
-            if first:
-                print(_pretty_write_dict(observation))
-                first = False
+            #if first:
+            #    print(_pretty_write_dict(observation))
+            #    first = False
             action = agent.act(observation)
             if observation['current_player'] == agent_id:
                 assert action is not None
@@ -111,6 +110,11 @@ for i in range(5):
 
     print("Game over.  Fireworks",observation["fireworks"],"Score=",episode_reward)
 
+    if turns > max_game_length:
+        max_game_length = turns
+
+    #print(_pretty_write_dict(observation))
+
     results.append(
         {
             "fireworks": observation["fireworks"],
@@ -125,3 +129,5 @@ for r in range(len(results)):
     print("Game {}: Fireworks: {}, Score: {}".format(r, results[r]["fireworks"], results[r]["score"]))
 
 print("Average score: {}".format(total_score/len(results)))
+
+print(f"Max game length: {max_game_length}")
