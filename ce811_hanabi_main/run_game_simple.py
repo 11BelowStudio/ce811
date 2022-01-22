@@ -71,9 +71,13 @@ for i in range(200):
 
     observations = environment.reset()
 
+    print(observations['player_observations'][0]["vectorized"])
+
+    print(getstructure(observations))
     turns: int = 0
 
     first = True
+
 
     # Build the team of players - each programmed with the same agent logic ("Mirror Mode")
     # Even though they are the same program logic for each player, they cannot exchange information
