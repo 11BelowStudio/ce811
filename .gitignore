@@ -7,3 +7,5 @@
 /dataSources.local.xml
 # Editor-based HTTP Client requests
 /httpRequests/
+/lab4exercises/_pycache_/
+/lab5exercises/_pycache_/
