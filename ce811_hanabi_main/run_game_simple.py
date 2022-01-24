@@ -71,6 +71,9 @@ for i in range(200):
 
     observations = environment.reset()
 
+
+
+
     print(observations['player_observations'][0]["vectorized"])
 
     print(getstructure(observations))
@@ -107,7 +110,6 @@ for i in range(200):
 
         # Make an environment step.
         observations, reward, done, unused_info = environment.step(current_player_action)
-        print(unused_info)
         if reward<0:
             reward=0 # we're changing the rules so that losing all lives does not result in the score being zeroed.
         episode_reward += reward

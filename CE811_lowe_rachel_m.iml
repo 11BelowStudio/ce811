@@ -10,4 +10,7 @@
     <orderEntry type="jdk" jdkName="Python 3.9 (CE811_lowe_rachel_m)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
+  <component name="PyDocumentationSettings">
+    <option name="renderExternalDocumentation" value="true" />
+  </component>
 </module>
