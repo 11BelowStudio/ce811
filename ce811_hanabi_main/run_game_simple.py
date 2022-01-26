@@ -65,7 +65,7 @@ def _pretty_write_dict(dictionary):
     dict_text = _nested(dictionary)
     return dict_text
 
-max_game_length: int = 0
+
 
 for i in range(200):
 

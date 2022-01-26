@@ -1,4 +1,7 @@
 from __future__ import annotations
+
+import pprint
+
 """Simple Agent."""
 # Modified from https://github.com/deepmind/hanabi-learning-environment/blob/master/hanabi_learning_environment/agents/simple_agent.py 
 
@@ -96,6 +99,23 @@ class SimpleAgent(Agent):
 
         if observation['current_player_offset'] != 0:
             return None # No action returned (because it's not our turn!)
+
+
+        if any(c["rank"] != -1 for c in observation["observed_hands"][0]):
+            print("knowledge:")
+            pprint.pprint(observation["card_knowledge"][0])
+            print("observed:")
+            pprint.pprint(observation["observed_hands"][0])
+
+            print("\nAll knowledge:")
+            pprint.pprint(observation["card_knowledge"])
+            print("\nAll observed:")
+            pprint.pprint(observation["observed_hands"])
+
+            assert False
+
+
+
 
         fireworks: FireworksDict = observation['fireworks'] # This is a dictionary like {'R': 0, 'Y': 1, 'G': 0, 'W': 1, 'B': 0}
 
