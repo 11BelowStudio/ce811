@@ -12,8 +12,7 @@ exactly the structure of the labs will be), so you'll have to
 wait for that to happen I guess :shrug:
 
 anyway if you're reading this, this is probably one of the branches for
-the lab work (or one of the assignments) that involves the framework for
-The Resistance.
+the lab work (unless I've already put it into the master branch)
 
 Specifically, this is the branch I'm using for lab 10
 
